@@ -245,40 +245,7 @@
                         </div>
                         
                         <div class="form-navigation">
-                            <button type="button" id="next-to-interests" class="btn-modern">Next</button>
-                        </div>
-                    </div>
-                    
-                    <div class="form-step" id="step-2">
-                        <h3>Select Your Interests</h3>
-                        <p>Choose at least 3 interests to help us match you with like-minded people</p>
-                        
-                        <div class="interests-container" id="onboarding-interests">
-                            <div class="interest-tag" data-interest="music">Music</div>
-                            <div class="interest-tag" data-interest="gaming">Gaming</div>
-                            <div class="interest-tag" data-interest="movies">Movies</div>
-                            <div class="interest-tag" data-interest="technology">Technology</div>
-                            <div class="interest-tag" data-interest="sports">Sports</div>
-                            <div class="interest-tag" data-interest="books">Books</div>
-                            <div class="interest-tag" data-interest="travel">Travel</div>
-                            <div class="interest-tag" data-interest="food">Food</div>
-                            <div class="interest-tag" data-interest="fashion">Fashion</div>
-                            <div class="interest-tag" data-interest="art">Art</div>
-                            <div class="interest-tag" data-interest="science">Science</div>
-                            <div class="interest-tag" data-interest="programming">Programming</div>
-                            <div class="interest-tag" data-interest="photography">Photography</div>
-                            <div class="interest-tag" data-interest="fitness">Fitness</div>
-                            <div class="interest-tag" data-interest="politics">Politics</div>
-                            <div class="interest-tag" data-interest="history">History</div>
-                        </div>
-                        
-                        <div class="selected-count">
-                            Selected: <span id="interest-count">0</span>/3 minimum
-                        </div>
-                        
-                        <div class="form-navigation">
-                            <button type="button" id="back-to-profile" class="btn-secondary">Back</button>
-                            <button type="submit" id="complete-onboarding" class="btn-modern" disabled>Complete Profile</button>
+                            <button type="button" id="complete-profile-btn" class="btn-modern">Complete Profile</button>
                         </div>
                     </div>
                 </form>
@@ -305,16 +272,8 @@
         const getStartedBtn = document.getElementById('get-started-btn');
         const onboardingModal = document.getElementById('onboarding-modal');
         const closeModal = document.querySelector('.close-modal');
-        const nextToInterests = document.getElementById('next-to-interests');
-        const backToProfile = document.getElementById('back-to-profile');
-        const completeOnboarding = document.getElementById('complete-onboarding');
-        const step1 = document.getElementById('step-1');
-        const step2 = document.getElementById('step-2');
-        const interestCount = document.getElementById('interest-count');
-        const interestTags = document.querySelectorAll('#onboarding-interests .interest-tag');
+        const completeProfileBtn = document.getElementById('complete-profile-btn');
         const onboardingForm = document.getElementById('onboarding-form');
-        
-        let selectedInterests = [];
         
         if (getStartedBtn) {
             getStartedBtn.addEventListener('click', function() {
@@ -332,8 +291,8 @@
             });
         }
         
-        if (nextToInterests) {
-            nextToInterests.addEventListener('click', function() {
+        if (completeProfileBtn) {
+            completeProfileBtn.addEventListener('click', async function() {
                 const username = document.getElementById('username').value;
                 const age = document.getElementById('age').value;
                 const gender = document.querySelector('input[name="gender"]:checked');
@@ -348,70 +307,22 @@
                     return;
                 }
                 
-                step1.classList.remove('active');
-                step2.classList.add('active');
-            });
-        }
-        
-        if (backToProfile) {
-            backToProfile.addEventListener('click', function() {
-                step2.classList.remove('active');
-                step1.classList.add('active');
-            });
-        }
-        
-        if (interestTags) {
-            interestTags.forEach(tag => {
-                tag.addEventListener('click', function() {
-                    const interest = this.getAttribute('data-interest');
-                    
-                    if (this.classList.contains('active')) {
-                        // Remove interest
-                        this.classList.remove('active');
-                        selectedInterests = selectedInterests.filter(i => i !== interest);
-                    } else {
-                        // Add interest
-                        this.classList.add('active');
-                        selectedInterests.push(interest);
-                    }
-                    
-                    // Update count
-                    if (interestCount) {
-                        interestCount.textContent = selectedInterests.length;
-                    }
-                    
-                    // Enable/disable submit button
-                    if (completeOnboarding) {
-                        completeOnboarding.disabled = selectedInterests.length < 3;
-                    }
-                });
-            });
-        }
-        
-        if (onboardingForm) {
-            onboardingForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const username = document.getElementById('username').value;
-                const age = document.getElementById('age').value;
-                const gender = document.querySelector('input[name="gender"]:checked').value;
-                
                 // Save user data
                 if (window.authClient) {
                     try {
                         // Show loading state
-                        completeOnboarding.textContent = 'Saving...';
-                        completeOnboarding.disabled = true;
+                        completeProfileBtn.textContent = 'Saving...';
+                        completeProfileBtn.disabled = true;
                         
-                        // Save metadata
+                        // Save metadata with a default interest
                         await window.authClient.saveUserMetadata({
                             username: username,
                             age: parseInt(age),
-                            gender: gender,
-                            interests: selectedInterests
+                            gender: gender.value,
+                            interests: ['chat'] // Default interest
                         });
                         
-                        // Close modal and redirect to dashboard
+                        // Close modal
                         onboardingModal.style.display = 'none';
                         
                         // Show success message
@@ -423,13 +334,13 @@
                         // Redirect after 1.5 seconds
                         setTimeout(() => {
                             document.body.removeChild(successMessage);
-                            window.location.href = '/dashboard.html';
+                            window.location.href = '/chat.html?action=start-new';
                         }, 1500);
                     } catch (error) {
                         console.error('Error saving profile:', error);
                         alert('Error saving profile. Please try again.');
-                        completeOnboarding.textContent = 'Complete Profile';
-                        completeOnboarding.disabled = false;
+                        completeProfileBtn.textContent = 'Complete Profile';
+                        completeProfileBtn.disabled = false;
                     }
                 } else {
                     console.error('Auth client not available');

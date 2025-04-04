@@ -17,8 +17,37 @@ function initializeClerk() {
             return;
         }
         
-        // Only try to use Clerk if available and we have a key
-        if (typeof window.Clerk !== 'undefined' && CLERK_PUBLISHABLE_KEY) {
+        // Add Clerk script if not already present
+        if (typeof window.Clerk === 'undefined') {
+            console.log('Loading Clerk script');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.clerk.dev/v1/clerk.js';
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.onload = () => {
+                console.log('Clerk script loaded, initializing');
+                initializeClerkWithKey();
+            };
+            script.onerror = (error) => {
+                console.error('Error loading Clerk script:', error);
+                setupDemoMode();
+            };
+            document.head.appendChild(script);
+        } else {
+            // Clerk already loaded
+            initializeClerkWithKey();
+        }
+    } catch (error) {
+        console.error('Unexpected error initializing Clerk:', error);
+        showErrorMessage('Authentication error: ' + error.message);
+        setupDemoMode();
+    }
+}
+
+// Initialize Clerk with key
+function initializeClerkWithKey() {
+    try {
+        if (CLERK_PUBLISHABLE_KEY) {
             console.log('Attempting to initialize Clerk with key');
             
             // Initialize Clerk with a key
@@ -67,12 +96,11 @@ function initializeClerk() {
                 setupDemoMode();
             });
         } else {
-            console.warn('Clerk not available or missing publishable key, using demo mode');
+            console.warn('Missing Clerk publishable key, using demo mode');
             setupDemoMode();
         }
     } catch (error) {
-        console.error('Unexpected error initializing Clerk:', error);
-        showErrorMessage('Authentication error: ' + error.message);
+        console.error('Error in initializeClerkWithKey:', error);
         setupDemoMode();
     }
 }
@@ -352,23 +380,10 @@ function setupAuthButtons() {
         getStartedBtn.addEventListener('click', () => {
             console.log('Get started button clicked');
             
-            if (USE_DEMO_MODE) {
-                // In demo mode, show the onboarding modal directly
-                const onboardingModal = document.getElementById('onboarding-modal');
-                if (onboardingModal) {
-                    onboardingModal.style.display = 'flex';
-                }
-                return;
-            }
-            
-            // For Clerk auth, show Clerk modal
-            if (window.Clerk) {
-                window.Clerk.openSignUp({
-                    redirectUrl: '/',
-                    afterSignUpUrl: '/'
-                });
-            } else {
-                showErrorMessage('Authentication service not available');
+            // Show the onboarding modal directly, skip Clerk
+            const onboardingModal = document.getElementById('onboarding-modal');
+            if (onboardingModal) {
+                onboardingModal.style.display = 'flex';
             }
         });
     }
@@ -440,6 +455,85 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const onboardingForm = document.getElementById('onboarding-form');
     if (onboardingForm) {
+        // Skip to step-2 if interests are required, otherwise remove step-2
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const nextToInterests = document.getElementById('next-to-interests');
+        
+        // Remove interests step (step-2) and update button
+        if (step1 && step2 && nextToInterests) {
+            // Hide step-2 completely as we don't need interests
+            step2.style.display = 'none';
+            
+            // Change next button to complete button
+            nextToInterests.textContent = 'Complete Profile';
+            nextToInterests.classList.add('btn-primary');
+            
+            // Change next button functionality to submit the form
+            nextToInterests.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const age = document.getElementById('age').value;
+                const gender = document.querySelector('input[name="gender"]:checked');
+                
+                if (!username || !age || !gender) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+                
+                if (parseInt(age) < 18) {
+                    alert('You must be 18 or older to use this platform');
+                    return;
+                }
+                
+                // Save user data without interests
+                if (window.authClient) {
+                    try {
+                        // Show loading state
+                        nextToInterests.textContent = 'Saving...';
+                        nextToInterests.disabled = true;
+                        
+                        // Save metadata without interests
+                        await window.authClient.saveUserMetadata({
+                            username: username,
+                            age: parseInt(age),
+                            gender: gender.value,
+                            interests: ['chat'] // Add at least one default interest
+                        });
+                        
+                        // Close modal
+                        const onboardingModal = document.getElementById('onboarding-modal');
+                        if (onboardingModal) {
+                            onboardingModal.style.display = 'none';
+                        }
+                        
+                        // Show success message
+                        const successMessage = document.createElement('div');
+                        successMessage.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #2ecc71; color: white; padding: 15px; border-radius: 5px; z-index: 9999; max-width: 300px;';
+                        successMessage.textContent = 'Profile created successfully! Redirecting...';
+                        document.body.appendChild(successMessage);
+                        
+                        // Redirect after 1.5 seconds to chat page
+                        setTimeout(() => {
+                            document.body.removeChild(successMessage);
+                            redirectToChatPage();
+                        }, 1500);
+                    } catch (error) {
+                        console.error('Error saving profile:', error);
+                        alert('Error saving profile. Please try again.');
+                        
+                        nextToInterests.textContent = 'Complete Profile';
+                        nextToInterests.disabled = false;
+                    }
+                } else {
+                    console.error('Auth client not available');
+                    alert('Authentication error. Please refresh the page and try again.');
+                }
+            });
+        }
+        
+        // Keep the original submit event for backward compatibility
         onboardingForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -462,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         username: username,
                         age: parseInt(age),
                         gender: gender,
-                        interests: selectedInterests || []
+                        interests: ['chat'] // Add at least one default interest
                     });
                     
                     // Close modal
@@ -477,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     successMessage.textContent = 'Profile created successfully! Redirecting...';
                     document.body.appendChild(successMessage);
                     
-                    // Redirect after 1.5 seconds to chat page instead of dashboard
+                    // Redirect after 1.5 seconds
                     setTimeout(() => {
                         document.body.removeChild(successMessage);
                         redirectToChatPage();
