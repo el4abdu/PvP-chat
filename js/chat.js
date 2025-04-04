@@ -27,7 +27,8 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 const db = firebase.firestore();
 const rtdb = firebase.database();
 
-// Demo mode flag - should match auth.js
+// Debug variables
+const DEBUG_MODE = false;
 const USE_DEMO_MODE = true;
 
 // DOM Elements
@@ -159,84 +160,135 @@ const demoStrangerProfiles = [
 ];
 
 // Initialize chat
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', function() {
     console.log('Chat page loaded');
     
-    // Wait for Clerk to be initialized
-    if (typeof window.authClient === 'undefined') {
-        console.log('Auth client not found, waiting...');
-        const checkAuthClient = setInterval(() => {
-            if (typeof window.authClient !== 'undefined') {
-                console.log('Auth client found');
-                clearInterval(checkAuthClient);
-                initChat();
-            }
-        }, 100);
-    } else {
-        console.log('Auth client already available');
-        initChat();
-    }
+    // Check if user is authenticated
+    checkAuthentication();
+    
+    // Initialize UI components
+    initializeChatInterface();
 });
 
-// Initialize the chat
-async function initChat() {
-    try {
-        console.log('Initializing chat');
-        
-        // Load user profile
-        userProfile = window.authClient.getUserProfile();
-        if (!userProfile) {
-            console.error('No user profile found');
-            // Redirect to home if not authenticated
-            window.location.href = '/';
-            return;
-        }
-
-        userId = userProfile.id;
-        console.log('User profile loaded:', userProfile);
-        
-        // Update user UI in the sidebar
-        updateUserUI();
-
-        // Check if we need to start a new chat or join an existing one
-        const urlParams = new URLSearchParams(window.location.search);
-        const action = urlParams.get('action');
-        roomId = urlParams.get('room');
-
-        // Set up event listeners
-        setupEventListeners();
-        
-        if (action === 'start-new') {
-            // User wants to start a new chat - show the new chat modal
-            console.log('Starting new chat flow');
-            showNewChatModal();
-        } else if (roomId) {
-            // Join existing room
-            console.log('Joining existing room:', roomId);
+// Check if user is authenticated, if not redirect to login
+function checkAuthentication() {
+    console.log('Checking authentication...');
+    
+    // Wait for auth client to be available
+    const checkAuth = setInterval(() => {
+        if (window.authClient) {
+            clearInterval(checkAuth);
             
-            if (USE_DEMO_MODE && roomId.startsWith('demo-')) {
-                console.log('Demo mode - setting up demo chat');
+            try {
+                const user = window.authClient.getUser();
+                console.log('Auth check:', user ? 'User is authenticated' : 'No authenticated user');
+                
+                if (!user && !USE_DEMO_MODE) {
+                    console.log('No authenticated user, redirecting to home page');
+                    window.location.href = '/';
+                    return;
+                }
+                
+                if (user) {
+                    // User is authenticated - let's check if profile is complete
+                    const metadata = window.authClient.getUserMetadata();
+                    metadata.then(data => {
+                        console.log('User metadata:', data);
+                        if (!data || !data.username || !data.gender || !data.age) {
+                            console.log('User profile incomplete, showing modal');
+                            
+                            // Show onboarding modal if present on chat page
+                            const onboardingModal = document.getElementById('onboarding-modal');
+                            if (onboardingModal) {
+                                onboardingModal.style.display = 'flex';
+                            } else {
+                                // If no modal on chat page, redirect to home for onboarding
+                                window.location.href = '/';
+                            }
+                        } else {
+                            // User is authenticated and has complete profile
+                            console.log('User authenticated with complete profile');
+                            updateUserUI();
+                        }
+                    });
+                } else {
+                    // Demo mode, proceed with demo chat
+                    console.log('Using demo mode for chat');
+                    setupDemoChat();
+                }
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                if (USE_DEMO_MODE) {
+                    console.log('Falling back to demo mode due to error');
+                    setupDemoChat();
+                } else {
+                    window.location.href = '/';
+                }
+            }
+        }
+    }, 100);
+    
+    // If auth client not available after 5 seconds, use demo mode or redirect
+    setTimeout(() => {
+        clearInterval(checkAuth);
+        if (!window.authClient) {
+            console.warn('Auth client not available after timeout');
+            if (USE_DEMO_MODE) {
+                console.log('Using demo mode for chat after timeout');
                 setupDemoChat();
             } else {
-                // Load actual chat room data
-                await loadChatRoom();
+                window.location.href = '/';
             }
-        } else {
-            // No action or room specified, go to new chat flow
-            console.log('No action or room specified, showing new chat modal');
-            showNewChatModal();
         }
-        
-        // In demo mode, populate active chats
-        if (USE_DEMO_MODE) {
-            populateDemoChats();
-        } else {
-            // TODO: Load actual active chats from Firebase
-            loadActiveChats();
+    }, 5000);
+}
+
+// Initialize the chat interface
+function initializeChatInterface() {
+    console.log('Initializing chat interface');
+    
+    // Set up event listeners for buttons
+    document.getElementById('new-chat-btn')?.addEventListener('click', showNewChatModal);
+    document.getElementById('close-new-chat')?.addEventListener('click', () => hideModal('new-chat-modal'));
+    document.getElementById('random-chat-btn')?.addEventListener('click', () => selectChatOption('random'));
+    document.getElementById('interests-chat-btn')?.addEventListener('click', () => selectChatOption('interests'));
+    document.getElementById('gender-chat-btn')?.addEventListener('click', () => selectChatOption('gender'));
+    document.getElementById('start-chat-btn')?.addEventListener('click', startNewChat);
+    document.getElementById('send-btn')?.addEventListener('click', sendMessage);
+    document.getElementById('message-input')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
         }
-    } catch (error) {
-        console.error('Error initializing chat:', error);
-        showErrorToast('Error initializing chat. Please try again.');
+    });
+    document.getElementById('close-profile-sidebar')?.addEventListener('click', closeProfileSidebar);
+    document.getElementById('interests-btn')?.addEventListener('click', toggleProfileSidebar);
+    document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
+    
+    // Chat filter buttons
+    document.querySelectorAll('.filter-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            filterChats(filter);
+            
+            // Update active state
+            document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+    
+    // Setup search
+    document.getElementById('chat-search-input')?.addEventListener('input', function() {
+        searchChats(this.value);
+    });
+    
+    // Action buttons
+    document.getElementById('report-btn')?.addEventListener('click', submitReport);
+    document.getElementById('skip-btn')?.addEventListener('click', skipChat);
+    document.getElementById('end-chat-btn')?.addEventListener('click', endChat);
+    
+    // Demo setup if needed
+    if (USE_DEMO_MODE) {
+        populateDemoChats();
     }
 }
 

@@ -36,16 +36,12 @@ function initializeClerk() {
                         if (isComplete) {
                             // User has completed profile, redirect to chat directly
                             if (window.location.pathname === '/' || 
-                                window.location.pathname === '/index.html' || 
-                                window.location.pathname === '/dashboard.html') {
+                                window.location.pathname === '/index.html') {
                                 redirectToChatPage();
                             }
                         } else {
-                            // User hasn't completed profile, direct to dashboard if on home page
+                            // User hasn't completed profile, show onboarding modal
                             if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-                                window.location.href = '/dashboard.html';
-                            } else if (window.location.pathname === '/dashboard.html') {
-                                // Already on dashboard, show onboarding modal if needed
                                 showOnboardingModal();
                             }
                         }
@@ -83,9 +79,6 @@ function initializeClerk() {
 
 // Redirect to chat page
 function redirectToChatPage() {
-    // Create a chat room with a random ID
-    const randomRoomId = 'room-' + Math.random().toString(36).substring(2, 10);
-    
     // Redirect to chat page
     window.location.href = `/chat.html?action=start-new`;
 }
@@ -216,16 +209,14 @@ function setupDemoMode() {
                          
     // Show onboarding if needed
     if (needsProfile) {
-        if (window.location.pathname === '/') {
+        if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
             // On homepage - Let the DOM load fully before showing modal
             setTimeout(() => {
                 showOnboardingModal();
             }, 1000);
-        } else if (window.location.pathname === '/dashboard.html') {
-            // Already on dashboard - do nothing
         } else if (!window.location.pathname.includes('chat.html')) {
-            // Not on chat page or dashboard - redirect to dashboard
-            window.location.href = '/dashboard.html';
+            // Redirect to index if not on chat page
+            window.location.href = '/';
         }
     } else {
         // Profile complete, redirect to chat if not already on chat page
@@ -362,7 +353,7 @@ function setupAuthButtons() {
             console.log('Get started button clicked');
             
             if (USE_DEMO_MODE) {
-                // In demo mode, show the onboarding modal
+                // In demo mode, show the onboarding modal directly
                 const onboardingModal = document.getElementById('onboarding-modal');
                 if (onboardingModal) {
                     onboardingModal.style.display = 'flex';
@@ -425,12 +416,8 @@ function setupClerkListeners() {
                             redirectToChatPage();
                         }, 1000);
                     } else {
-                        // User hasn't completed profile, show onboarding modal or go to dashboard
-                        if (window.location.pathname === '/dashboard.html') {
-                            showOnboardingModal();
-                        } else {
-                            window.location.href = '/dashboard.html';
-                        }
+                        // User hasn't completed profile, show onboarding modal
+                        showOnboardingModal();
                     }
                 });
             },
@@ -447,4 +434,68 @@ function setupClerkListeners() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing Clerk');
     initializeClerk();
+});
+
+// Update the onboarding form to redirect to chat.html instead of dashboard
+document.addEventListener('DOMContentLoaded', () => {
+    const onboardingForm = document.getElementById('onboarding-form');
+    if (onboardingForm) {
+        onboardingForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const age = document.getElementById('age').value;
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+            
+            // Save user data
+            if (window.authClient) {
+                try {
+                    // Show loading state
+                    const completeOnboarding = document.getElementById('complete-onboarding');
+                    if (completeOnboarding) {
+                        completeOnboarding.textContent = 'Saving...';
+                        completeOnboarding.disabled = true;
+                    }
+                    
+                    // Save metadata
+                    await window.authClient.saveUserMetadata({
+                        username: username,
+                        age: parseInt(age),
+                        gender: gender,
+                        interests: selectedInterests || []
+                    });
+                    
+                    // Close modal
+                    const onboardingModal = document.getElementById('onboarding-modal');
+                    if (onboardingModal) {
+                        onboardingModal.style.display = 'none';
+                    }
+                    
+                    // Show success message
+                    const successMessage = document.createElement('div');
+                    successMessage.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #2ecc71; color: white; padding: 15px; border-radius: 5px; z-index: 9999; max-width: 300px;';
+                    successMessage.textContent = 'Profile created successfully! Redirecting...';
+                    document.body.appendChild(successMessage);
+                    
+                    // Redirect after 1.5 seconds to chat page instead of dashboard
+                    setTimeout(() => {
+                        document.body.removeChild(successMessage);
+                        redirectToChatPage();
+                    }, 1500);
+                } catch (error) {
+                    console.error('Error saving profile:', error);
+                    alert('Error saving profile. Please try again.');
+                    
+                    const completeOnboarding = document.getElementById('complete-onboarding');
+                    if (completeOnboarding) {
+                        completeOnboarding.textContent = 'Complete Profile';
+                        completeOnboarding.disabled = false;
+                    }
+                }
+            } else {
+                console.error('Auth client not available');
+                alert('Authentication error. Please refresh the page and try again.');
+            }
+        });
+    }
 }); 
