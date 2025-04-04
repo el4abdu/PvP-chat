@@ -3,19 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatConnect - Meet New People</title>
+    <title>PvP Chat - Meet New People</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-analytics.js"></script>
+    <script>
+        // Debug console
+        console.log('Page loading...');
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+        });
+        window.addEventListener('load', function() {
+            console.log('All resources loaded');
+        });
+        window.addEventListener('error', function(e) {
+            console.error('Error:', e.message, 'at', e.filename, ':', e.lineno);
+        });
+
+        // Initialize Firebase directly
+        window.firebaseConfig = {
+            apiKey: "AIzaSyCbDDimyxwhKaXon4IQwZTpgP2Twb8bHMo",
+            authDomain: "pvp-chat-fe5ab.firebaseapp.com",
+            projectId: "pvp-chat-fe5ab",
+            storageBucket: "pvp-chat-fe5ab.firebasestorage.app",
+            messagingSenderId: "387500645051",
+            appId: "1:387500645051:web:4a4428e53c637ec2e9a79e",
+            measurementId: "G-90LCQ3SF9X"
+        };
+
+        // Create a global firebase variable
+        window.addEventListener('DOMContentLoaded', function() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(window.firebaseConfig);
+                    console.log('Firebase initialized on page load');
+                }
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+            }
+        });
+    </script>
+    <style>
+        /* Fix modal display */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">
-                <span class="logo-text">ChatConnect</span>
                 <span class="logo-icon">💬</span>
+                <span class="logo-text">PvP Chat</span>
             </div>
             <nav>
                 <ul>
@@ -43,7 +116,7 @@
             </section>
 
             <section id="features" class="features">
-                <h2>Why Choose ChatConnect?</h2>
+                <h2>Why Choose PvP Chat?</h2>
                 <div class="feature-cards">
                     <div class="feature-card">
                         <div class="feature-icon">🔒</div>
@@ -65,7 +138,7 @@
         </main>
 
         <footer>
-            <p>&copy; 2025 ChatConnect. All rights reserved.</p>
+            <p>&copy; 2024 PvP Chat. All rights reserved.</p>
             <div class="footer-links">
                 <a href="#">Privacy Policy</a>
                 <a href="#">Terms of Service</a>
@@ -80,6 +153,79 @@
             <div id="clerk-auth-container"></div>
         </div>
     </div>
+
+    <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light mode">🌙</button>
+
+    <div id="debug-panel" style="position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; max-width: 300px; z-index: 9999; font-family: monospace; font-size: 12px; display: none;">
+        <div>Debug Panel</div>
+        <div id="debug-log" style="max-height: 200px; overflow-y: auto;"></div>
+        <button onclick="document.getElementById('debug-panel').style.display='none'">Close</button>
+    </div>
+
+    <script>
+        // Show debug panel on key combination (Ctrl+Shift+D)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                document.getElementById('debug-panel').style.display = 'block';
+            }
+        });
+
+        // Add debug log function
+        function debugLog(message) {
+            const logElement = document.getElementById('debug-log');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        window.debugLog = debugLog;
+        
+        // Direct button handlers (bypassing Clerk if needed)
+        document.addEventListener('DOMContentLoaded', function() {
+            const signInBtn = document.getElementById('sign-in-btn');
+            const signUpBtn = document.getElementById('sign-up-btn');
+            const getStartedBtn = document.getElementById('get-started-btn');
+            const clerkModal = document.getElementById('clerk-modal');
+            const closeModal = document.querySelector('.close-modal');
+            
+            // Functions to show/hide modal directly
+            function showModal() {
+                clerkModal.classList.add('show');
+                debugLog('Modal opened');
+            }
+            
+            function hideModal() {
+                clerkModal.classList.remove('show');
+                debugLog('Modal closed');
+            }
+            
+            // Add direct event listeners
+            if (signInBtn) {
+                signInBtn.addEventListener('click', showModal);
+            }
+            
+            if (signUpBtn) {
+                signUpBtn.addEventListener('click', showModal);
+            }
+            
+            if (getStartedBtn) {
+                getStartedBtn.addEventListener('click', showModal);
+            }
+            
+            if (closeModal) {
+                closeModal.addEventListener('click', hideModal);
+            }
+            
+            // Close when clicking outside content
+            clerkModal.addEventListener('click', function(e) {
+                if (e.target === clerkModal) {
+                    hideModal();
+                }
+            });
+        });
+    </script>
 
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>

@@ -1,45 +1,72 @@
-// Firebase Configuration
-const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "your-project-id.firebaseapp.com",
-    databaseURL: "https://your-project-id.firebaseio.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "your-messaging-sender-id",
-    appId: "your-app-id"
-};
+// Initialize Firebase only if not already initialized
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    try {
+        // Use the config from index.html if available
+        if (window.firebaseConfig) {
+            firebase.initializeApp(window.firebaseConfig);
+        } else {
+            // Fallback config
+            firebase.initializeApp({
+                apiKey: "AIzaSyCbDDimyxwhKaXon4IQwZTpgP2Twb8bHMo",
+                authDomain: "pvp-chat-fe5ab.firebaseapp.com",
+                projectId: "pvp-chat-fe5ab",
+                storageBucket: "pvp-chat-fe5ab.firebasestorage.app",
+                messagingSenderId: "387500645051",
+                appId: "1:387500645051:web:4a4428e53c637ec2e9a79e",
+                measurementId: "G-90LCQ3SF9X"
+            });
+        }
+        console.log('Firebase initialized from dashboard.js');
+    } catch (error) {
+        console.error('Firebase initialization failed', error);
+    }
+} else {
+    console.log('Firebase already initialized, using existing instance');
+}
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const rtdb = firebase.database();
 
+// Demo mode flag - should match auth.js
+const USE_DEMO_MODE = true;
+
 // DOM Elements
-const profileAvatar = document.getElementById('profile-avatar');
-const profileUsername = document.getElementById('profile-username');
-const profileAge = document.getElementById('profile-age');
-const profileGender = document.getElementById('profile-gender');
+const username = document.getElementById('username');
+const userAvatar = document.getElementById('user-avatar');
+const userEmail = document.getElementById('user-email');
+const userId = document.getElementById('user-id');
+const userJoined = document.getElementById('user-joined');
 const interestsContainer = document.getElementById('interests-container');
-const startChatBtn = document.getElementById('start-chat-btn');
+const saveInterestsBtn = document.getElementById('save-interests-btn');
+const randomChatBtn = document.getElementById('random-chat-btn');
+const interestsChatBtn = document.getElementById('interests-chat-btn');
+const waitingScreen = document.getElementById('waiting-screen');
+const waitingTime = document.getElementById('waiting-time');
+const cancelWaitingBtn = document.getElementById('cancel-waiting-btn');
 const signOutBtn = document.getElementById('sign-out-btn');
-const profileModal = document.getElementById('profile-modal');
-const profileForm = document.getElementById('profile-form');
 
 // Selected interests
 let selectedInterests = [];
 const MIN_INTERESTS = 3;
+let waitingInterval = null;
+let waitingSeconds = 0;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Dashboard page loaded');
+    
     // Wait for Clerk to be initialized
     if (typeof window.authClient === 'undefined') {
+        console.log('Auth client not found, waiting...');
         const checkAuthClient = setInterval(() => {
             if (typeof window.authClient !== 'undefined') {
+                console.log('Auth client found');
                 clearInterval(checkAuthClient);
                 initDashboard();
             }
         }, 100);
     } else {
+        console.log('Auth client already available');
         initDashboard();
     }
 });
@@ -47,13 +74,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Initialize the dashboard
 async function initDashboard() {
     try {
+        console.log('Initializing dashboard');
+        
         // Load user profile
         const profile = window.authClient.getUserProfile();
         if (!profile) {
+            console.error('No user profile found');
             // Redirect to home if not authenticated
             window.location.href = '/';
             return;
         }
+        
+        console.log('User profile loaded:', profile);
 
         // Update profile UI
         updateProfileUI(profile);
@@ -61,8 +93,11 @@ async function initDashboard() {
         // Get user metadata
         const metadata = await window.authClient.getUserMetadata();
         if (metadata) {
+            console.log('User metadata loaded:', metadata);
             // Update metadata UI
             updateMetadataUI(metadata);
+        } else {
+            console.warn('No user metadata found');
         }
 
         // Set up interest tags
@@ -70,32 +105,48 @@ async function initDashboard() {
 
         // Set up event listeners
         setupEventListeners();
+        
+        console.log('Dashboard initialization complete');
     } catch (error) {
         console.error('Error initializing dashboard:', error);
+        
+        // Show error to user
+        showErrorMessage('Error loading dashboard: ' + error.message);
     }
 }
 
 // Update profile UI
 function updateProfileUI(profile) {
-    profileUsername.textContent = profile.username;
+    console.log('Updating profile UI');
+    if (username) {
+        username.textContent = profile.username || 'Anonymous';
+    }
     
-    if (profile.avatar) {
-        profileAvatar.src = profile.avatar;
-    } else {
-        // Use DiceBear API to generate avatar based on username
-        profileAvatar.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`;
+    if (userAvatar) {
+        if (profile.avatar) {
+            userAvatar.src = profile.avatar;
+        } else {
+            // Use DiceBear API to generate avatar based on username
+            userAvatar.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'anonymous'}`;
+        }
+    }
+    
+    if (userEmail) {
+        userEmail.textContent = profile.email || '';
+    }
+    
+    if (userId) {
+        userId.textContent = 'ID: ' + profile.id;
+    }
+    
+    if (userJoined) {
+        userJoined.textContent = 'Joined: Today';
     }
 }
 
 // Update metadata UI
 function updateMetadataUI(metadata) {
-    if (metadata.age) {
-        profileAge.textContent = `${metadata.age}`;
-    }
-    
-    if (metadata.gender) {
-        profileGender.textContent = metadata.gender.charAt(0).toUpperCase() + metadata.gender.slice(1);
-    }
+    console.log('Updating metadata UI');
     
     if (metadata.interests && metadata.interests.length > 0) {
         selectedInterests = metadata.interests;
@@ -105,7 +156,13 @@ function updateMetadataUI(metadata) {
 
 // Set up interest tags
 function setupInterestTags() {
+    console.log('Setting up interest tags');
     const interestTags = document.querySelectorAll('.interest-tag');
+    
+    if (!interestTags || interestTags.length === 0) {
+        console.warn('No interest tags found in the document');
+        return;
+    }
     
     interestTags.forEach(tag => {
         tag.addEventListener('click', () => {
@@ -121,11 +178,13 @@ function setupInterestTags() {
                 tag.classList.add('active');
             }
             
-            // Save interests to user metadata
-            window.authClient.saveUserMetadata({ interests: selectedInterests });
+            console.log('Updated interests:', selectedInterests);
             
-            // Update start chat button state
-            updateStartChatButton();
+            // Save interests to user metadata
+            saveInterests();
+            
+            // Update buttons state
+            updateButtonsState();
         });
     });
     
@@ -133,9 +192,46 @@ function setupInterestTags() {
     updateInterestTags();
 }
 
+// Save interests to user metadata
+async function saveInterests() {
+    if (saveInterestsBtn) {
+        saveInterestsBtn.textContent = 'Saving...';
+        saveInterestsBtn.disabled = true;
+    }
+    
+    try {
+        await window.authClient.saveUserMetadata({ interests: selectedInterests });
+        console.log('Interests saved successfully');
+        
+        if (saveInterestsBtn) {
+            saveInterestsBtn.textContent = 'Saved!';
+            setTimeout(() => {
+                saveInterestsBtn.textContent = 'Save Interests';
+                saveInterestsBtn.disabled = false;
+            }, 1500);
+        }
+    } catch (error) {
+        console.error('Error saving interests:', error);
+        
+        if (saveInterestsBtn) {
+            saveInterestsBtn.textContent = 'Error';
+            setTimeout(() => {
+                saveInterestsBtn.textContent = 'Save Interests';
+                saveInterestsBtn.disabled = false;
+            }, 1500);
+        }
+    }
+}
+
 // Update interest tags UI
 function updateInterestTags() {
+    console.log('Updating interest tags UI');
     const interestTags = document.querySelectorAll('.interest-tag');
+    
+    if (!interestTags || interestTags.length === 0) {
+        console.warn('No interest tags found when updating');
+        return;
+    }
     
     interestTags.forEach(tag => {
         const interest = tag.getAttribute('data-interest');
@@ -147,111 +243,133 @@ function updateInterestTags() {
         }
     });
     
-    // Update start chat button state
-    updateStartChatButton();
+    // Update buttons state
+    updateButtonsState();
 }
 
-// Update start chat button state
-function updateStartChatButton() {
-    if (selectedInterests.length >= MIN_INTERESTS) {
-        startChatBtn.disabled = false;
-        startChatBtn.classList.remove('disabled');
-    } else {
-        startChatBtn.disabled = true;
-        startChatBtn.classList.add('disabled');
+// Update buttons state
+function updateButtonsState() {
+    // Update start chat buttons
+    if (randomChatBtn) {
+        randomChatBtn.disabled = false;
+    }
+    
+    if (interestsChatBtn) {
+        if (selectedInterests.length >= MIN_INTERESTS) {
+            interestsChatBtn.disabled = false;
+        } else {
+            interestsChatBtn.disabled = true;
+            interestsChatBtn.title = `Select at least ${MIN_INTERESTS} interests`;
+        }
     }
 }
 
 // Set up event listeners
 function setupEventListeners() {
+    console.log('Setting up event listeners');
+    
     // Sign out button
     if (signOutBtn) {
         signOutBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            console.log('Sign out button clicked');
             window.authClient.handleSignOut();
         });
+    } else {
+        console.warn('Sign out button not found');
     }
     
-    // Start chat button
-    if (startChatBtn) {
-        startChatBtn.addEventListener('click', startRandomChat);
+    // Save interests button
+    if (saveInterestsBtn) {
+        saveInterestsBtn.addEventListener('click', saveInterests);
     }
     
-    // Profile form
-    if (profileForm) {
-        profileForm.addEventListener('submit', saveProfileData);
-    }
-}
-
-// Save profile data
-async function saveProfileData(e) {
-    e.preventDefault();
-    
-    const age = document.getElementById('age').value;
-    const gender = document.getElementById('gender').value;
-    
-    if (!age || !gender) {
-        alert('Please fill in all required fields');
-        return;
+    // Random chat button
+    if (randomChatBtn) {
+        randomChatBtn.addEventListener('click', startRandomChat);
     }
     
-    // Validate age
-    if (parseInt(age) < 18) {
-        alert('You must be 18 or older to use this platform');
-        return;
+    // Interests chat button
+    if (interestsChatBtn) {
+        interestsChatBtn.addEventListener('click', startInterestsChat);
     }
     
-    try {
-        // Save metadata
-        const success = await window.authClient.saveUserMetadata({
-            age: parseInt(age),
-            gender: gender
-        });
-        
-        if (success) {
-            // Close modal
-            profileModal.style.display = 'none';
-            
-            // Update UI
-            profileAge.textContent = age;
-            profileGender.textContent = gender.charAt(0).toUpperCase() + gender.slice(1);
-        } else {
-            alert('An error occurred. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error saving profile data:', error);
-        alert('An error occurred. Please try again.');
+    // Cancel waiting button
+    if (cancelWaitingBtn) {
+        cancelWaitingBtn.addEventListener('click', cancelWaiting);
     }
 }
 
 // Start random chat
-async function startRandomChat() {
+function startRandomChat() {
+    console.log('Starting random chat');
+    startChat(false);
+}
+
+// Start interests chat
+function startInterestsChat() {
+    console.log('Starting interests chat');
+    
     if (selectedInterests.length < MIN_INTERESTS) {
-        alert(`Please select at least ${MIN_INTERESTS} interests first`);
+        showErrorMessage(`Please select at least ${MIN_INTERESTS} interests first`);
         return;
     }
     
+    startChat(true);
+}
+
+// Start a chat
+async function startChat(useInterests) {
     try {
-        startChatBtn.disabled = true;
-        startChatBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finding someone...';
+        // Disable buttons
+        if (randomChatBtn) randomChatBtn.disabled = true;
+        if (interestsChatBtn) interestsChatBtn.disabled = true;
+        
+        // Show waiting screen
+        if (waitingScreen) waitingScreen.style.display = 'block';
+        
+        // Start timer
+        waitingSeconds = 0;
+        if (waitingTime) waitingTime.textContent = 'Time elapsed: 0s';
+        waitingInterval = setInterval(() => {
+            waitingSeconds++;
+            if (waitingTime) waitingTime.textContent = `Time elapsed: ${waitingSeconds}s`;
+        }, 1000);
+        
+        // In demo mode, just redirect to a demo chat after a short delay
+        if (USE_DEMO_MODE) {
+            console.log('Demo mode - generating mock chat room');
+            // Create a fake room ID
+            const roomId = 'demo-' + Math.random().toString(36).substring(2, 15);
+            
+            // Show searching animation for a moment to enhance the experience
+            setTimeout(() => {
+                console.log('Redirecting to demo chat room:', roomId);
+                window.location.href = `/chat.html?room=${roomId}`;
+            }, 2000);
+            return;
+        }
         
         // Get user profile
         const profile = window.authClient.getUserProfile();
         const metadata = await window.authClient.getUserMetadata();
         
         if (!profile || !metadata) {
-            alert('Could not retrieve your profile data');
-            resetStartChatButton();
+            console.error('Could not retrieve profile or metadata');
+            showErrorMessage('Could not retrieve your profile data');
+            resetChatButtons();
             return;
         }
+        
+        console.log('Creating chat with profile:', profile);
+        console.log('and metadata:', metadata);
         
         // Create user data object
         const userData = {
             id: profile.id,
-            username: profile.username,
-            age: metadata.age,
-            gender: metadata.gender,
+            username: profile.username || 'Anonymous',
             interests: selectedInterests,
+            useInterests: useInterests,
             status: 'searching',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -274,20 +392,46 @@ async function startRandomChat() {
         }
     } catch (error) {
         console.error('Error starting chat:', error);
-        alert('Error finding a chat partner. Please try again.');
-        resetStartChatButton();
+        showErrorMessage('Error finding a chat partner. Please try again.');
+        resetChatButtons();
     }
 }
 
-// Reset start chat button
-function resetStartChatButton() {
-    startChatBtn.disabled = false;
-    startChatBtn.innerHTML = '<i class="fas fa-comments"></i> Start Random Chat';
+// Reset chat buttons
+function resetChatButtons() {
+    if (randomChatBtn) randomChatBtn.disabled = false;
+    if (interestsChatBtn) interestsChatBtn.disabled = selectedInterests.length < MIN_INTERESTS;
+    if (waitingScreen) waitingScreen.style.display = 'none';
+    if (waitingInterval) clearInterval(waitingInterval);
+}
+
+// Cancel waiting
+async function cancelWaiting() {
+    console.log('Canceling waiting');
+    
+    // Reset UI
+    resetChatButtons();
+    
+    // In demo mode, no need to clean up database
+    if (USE_DEMO_MODE) return;
+    
+    // Get user profile
+    const profile = window.authClient.getUserProfile();
+    if (!profile) return;
+    
+    try {
+        // Remove from waiting pool
+        await db.collection('waiting_users').doc(profile.id).delete();
+    } catch (error) {
+        console.error('Error canceling waiting:', error);
+    }
 }
 
 // Add user to waiting pool
 async function addToWaitingPool(userData) {
     try {
+        console.log('Adding user to waiting pool:', userData);
+        
         // Add to waiting_users collection
         await db.collection('waiting_users').doc(userData.id).set(userData);
         
@@ -306,14 +450,19 @@ async function addToWaitingPool(userData) {
 // Find a match from waiting pool
 async function findMatch(userData) {
     try {
+        console.log('Finding match for user:', userData.id);
+        
         // Query for potential matches
-        const snapshot = await db.collection('waiting_users')
+        let query = db.collection('waiting_users')
             .where('id', '!=', userData.id)
-            .where('status', '==', 'searching')
-            .orderBy('id')
-            .orderBy('timestamp')
-            .limit(10)
-            .get();
+            .where('status', '==', 'searching');
+            
+        // If using interests, prioritize those who also want interest matching
+        if (userData.useInterests) {
+            query = query.where('useInterests', '==', true);
+        }
+        
+        const snapshot = await query.limit(10).get();
         
         if (snapshot.empty) {
             console.log('No users in waiting pool');
@@ -339,6 +488,8 @@ async function findMatch(userData) {
         });
         
         if (bestMatch) {
+            console.log(`Found match: ${bestMatch.username} with ${maxCommonInterests} common interests`);
+            
             // Remove best match from waiting pool
             await db.collection('waiting_users').doc(bestMatch.id).delete();
             
@@ -359,6 +510,8 @@ async function findMatch(userData) {
 // Create a chat room
 async function createChatRoom(user1Id, user2Id) {
     try {
+        console.log(`Creating chat room between ${user1Id} and ${user2Id}`);
+        
         // Create a unique room ID
         const roomId = generateRoomId();
         
@@ -369,6 +522,7 @@ async function createChatRoom(user1Id, user2Id) {
             active: true
         });
         
+        console.log('Created chat room with ID:', roomId);
         return roomId;
     } catch (error) {
         console.error('Error creating chat room:', error);
@@ -384,10 +538,14 @@ function generateRoomId() {
 // Wait for someone to match with us
 async function waitForMatch(userId) {
     try {
+        console.log('Waiting for match for user:', userId);
+        
         let attempts = 0;
         const maxAttempts = 30; // Wait up to 30 seconds
         
         while (attempts < maxAttempts) {
+            console.log(`Waiting for match... attempt ${attempts + 1}/${maxAttempts}`);
+            
             // Check if we've been matched
             const roomSnapshot = await db.collection('chat_rooms')
                 .where('participants', 'array-contains', userId)
@@ -400,6 +558,8 @@ async function waitForMatch(userId) {
                 // We've been matched, redirect to chat room
                 const roomDoc = roomSnapshot.docs[0];
                 const roomId = roomDoc.id;
+                
+                console.log('Match found! Room ID:', roomId);
                 
                 // Clean up waiting status
                 await db.collection('waiting_users').doc(userId).delete();
@@ -414,12 +574,26 @@ async function waitForMatch(userId) {
             attempts++;
         }
         
+        console.log('No match found after maximum attempts');
+        
         // If we've waited too long, give up and show error
         await db.collection('waiting_users').doc(userId).delete();
-        alert('Could not find a match at this time. Please try again later.');
-        resetStartChatButton();
+        showErrorMessage('Could not find a match at this time. Please try again later.');
+        resetChatButtons();
     } catch (error) {
         console.error('Error waiting for match:', error);
         throw error;
     }
+}
+
+// Show error message
+function showErrorMessage(message) {
+    // Show toast notification if available
+    if (window.appUtils && window.appUtils.showToast) {
+        window.appUtils.showToast(message, 'error');
+        return;
+    }
+    
+    // Fallback to alert
+    alert(message);
 } 

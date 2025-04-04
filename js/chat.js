@@ -1,18 +1,34 @@
-// Firebase Configuration
-const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "your-project-id.firebaseapp.com",
-    databaseURL: "https://your-project-id.firebaseio.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "your-messaging-sender-id",
-    appId: "your-app-id"
-};
+// Initialize Firebase only if not already initialized
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    try {
+        // Use the config from index.html if available
+        if (window.firebaseConfig) {
+            firebase.initializeApp(window.firebaseConfig);
+        } else {
+            // Fallback config
+            firebase.initializeApp({
+                apiKey: "AIzaSyCbDDimyxwhKaXon4IQwZTpgP2Twb8bHMo",
+                authDomain: "pvp-chat-fe5ab.firebaseapp.com",
+                projectId: "pvp-chat-fe5ab",
+                storageBucket: "pvp-chat-fe5ab.firebasestorage.app",
+                messagingSenderId: "387500645051",
+                appId: "1:387500645051:web:4a4428e53c637ec2e9a79e",
+                measurementId: "G-90LCQ3SF9X"
+            });
+        }
+        console.log('Firebase initialized from chat.js');
+    } catch (error) {
+        console.error('Firebase initialization failed', error);
+    }
+} else {
+    console.log('Firebase already initialized, using existing instance');
+}
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const rtdb = firebase.database();
+
+// Demo mode flag - should match auth.js
+const USE_DEMO_MODE = true;
 
 // DOM Elements
 const strangerUsername = document.getElementById('stranger-username');
@@ -40,17 +56,29 @@ let messagesListener = null;
 let roomListener = null;
 let isCommonInterestsPanelOpen = false;
 
+// Demo mode variables
+let demoStrangerProfile = {
+    id: 'demo-stranger',
+    username: 'Stranger',
+    interests: ['music', 'movies', 'gaming', 'technology', 'sports']
+};
+
 // Initialize chat
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Chat page loaded');
+    
     // Wait for Clerk to be initialized
     if (typeof window.authClient === 'undefined') {
+        console.log('Auth client not found, waiting...');
         const checkAuthClient = setInterval(() => {
             if (typeof window.authClient !== 'undefined') {
+                console.log('Auth client found');
                 clearInterval(checkAuthClient);
                 initChat();
             }
         }, 100);
     } else {
+        console.log('Auth client already available');
         initChat();
     }
 });
@@ -58,28 +86,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Initialize the chat
 async function initChat() {
     try {
+        console.log('Initializing chat');
+        
         // Load user profile
         userProfile = window.authClient.getUserProfile();
         if (!userProfile) {
+            console.error('No user profile found');
             // Redirect to home if not authenticated
             window.location.href = '/';
             return;
         }
 
         userId = userProfile.id;
+        console.log('User profile loaded:', userProfile);
 
         // Get room ID from URL
         const urlParams = new URLSearchParams(window.location.search);
         roomId = urlParams.get('room');
 
         if (!roomId) {
+            console.error('No room ID provided');
             // No room ID provided, redirect to dashboard
             window.location.href = '/dashboard.html';
             return;
         }
+        
+        console.log('Room ID:', roomId);
 
         // Set up event listeners
         setupEventListeners();
+        
+        // Check if we're in demo mode with a demo room
+        if (USE_DEMO_MODE && roomId.startsWith('demo-')) {
+            console.log('Demo mode - setting up demo chat');
+            setupDemoChat();
+            return;
+        }
 
         // Load chat room data
         await loadChatRoom();
@@ -90,11 +132,70 @@ async function initChat() {
     }
 }
 
+// Set up a demo chat for testing
+function setupDemoChat() {
+    console.log('Setting up demo chat');
+    
+    // Set up stranger profile
+    strangerProfile = demoStrangerProfile;
+    strangerId = demoStrangerProfile.id;
+    
+    // Update UI
+    if (strangerUsername) {
+        strangerUsername.textContent = strangerProfile.username;
+    }
+    
+    // Update connection status
+    if (connectionStatus) {
+        connectionStatus.textContent = 'Connected';
+        connectionStatus.classList.add('connected');
+    }
+    
+    // Set up common interests
+    setupDemoCommonInterests();
+    
+    // Add welcome message
+    const welcomeMessage = {
+        text: 'Hi there! This is a demo chat. Type a message to see how it works!',
+        senderId: strangerId,
+        timestamp: new Date()
+    };
+    
+    addMessageToUI(welcomeMessage);
+}
+
+// Set up demo common interests
+async function setupDemoCommonInterests() {
+    try {
+        // Get user metadata
+        const userMetadata = await window.authClient.getUserMetadata();
+        
+        if (userMetadata && userMetadata.interests) {
+            // Calculate common interests
+            commonInterests = userMetadata.interests.filter(interest => 
+                strangerProfile.interests.includes(interest)
+            );
+        } else {
+            // No user interests, just use a few random ones
+            commonInterests = ['music', 'technology'];
+        }
+        
+        // Update common interests UI
+        updateCommonInterestsUI();
+    } catch (error) {
+        console.error('Error setting up demo common interests:', error);
+    }
+}
+
 // Set up event listeners
 function setupEventListeners() {
+    console.log('Setting up event listeners');
+    
     // Send message
     if (sendBtn) {
         sendBtn.addEventListener('click', sendMessage);
+    } else {
+        console.warn('Send button not found');
     }
 
     // Send message on Enter key
@@ -104,37 +205,52 @@ function setupEventListeners() {
                 sendMessage();
             }
         });
+    } else {
+        console.warn('Message input not found');
     }
 
     // Back button
     if (backBtn) {
         backBtn.addEventListener('click', () => {
+            console.log('Back button clicked');
             window.location.href = '/dashboard.html';
         });
+    } else {
+        console.warn('Back button not found');
     }
 
     // Skip button
     if (skipBtn) {
         skipBtn.addEventListener('click', () => {
-            skipModal.style.display = 'flex';
+            console.log('Skip button clicked');
+            if (skipModal) skipModal.style.display = 'flex';
         });
+    } else {
+        console.warn('Skip button not found');
     }
 
     // Confirm skip
     if (confirmSkipBtn) {
         confirmSkipBtn.addEventListener('click', skipChat);
+    } else {
+        console.warn('Confirm skip button not found');
     }
 
     // Cancel skip
     if (cancelSkipBtn) {
         cancelSkipBtn.addEventListener('click', () => {
-            skipModal.style.display = 'none';
+            console.log('Cancel skip clicked');
+            if (skipModal) skipModal.style.display = 'none';
         });
+    } else {
+        console.warn('Cancel skip button not found');
     }
 
     // Toggle interests panel
     if (toggleInterestsBtn) {
         toggleInterestsBtn.addEventListener('click', toggleInterestsPanel);
+    } else {
+        console.warn('Toggle interests button not found');
     }
 
     // Set up beforeunload event to handle user leaving
@@ -153,10 +269,13 @@ function setupEventListeners() {
 // Load chat room data
 async function loadChatRoom() {
     try {
+        console.log('Loading chat room data');
+        
         // Get room data
         const roomDoc = await db.collection('chat_rooms').doc(roomId).get();
         
         if (!roomDoc.exists) {
+            console.error('Chat room not found');
             // Room doesn't exist, redirect to dashboard
             alert('Chat room not found');
             window.location.href = '/dashboard.html';
@@ -164,9 +283,11 @@ async function loadChatRoom() {
         }
         
         const roomData = roomDoc.data();
+        console.log('Room data:', roomData);
         
         // Check if user is a participant
         if (!roomData.participants.includes(userId)) {
+            console.error('User is not a participant in this chat');
             // User is not a participant, redirect to dashboard
             alert('You are not a participant in this chat');
             window.location.href = '/dashboard.html';
@@ -175,6 +296,7 @@ async function loadChatRoom() {
         
         // Get stranger ID
         strangerId = roomData.participants.find(id => id !== userId);
+        console.log('Stranger ID:', strangerId);
         
         // Set up room listener
         setupRoomListener();
@@ -186,8 +308,10 @@ async function loadChatRoom() {
         setupMessagesListener();
         
         // Update connection status
-        connectionStatus.textContent = 'Connected';
-        connectionStatus.classList.add('connected');
+        if (connectionStatus) {
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.classList.add('connected');
+        }
     } catch (error) {
         console.error('Error loading chat room:', error);
         alert('Error loading chat room. Please try again.');
@@ -197,10 +321,13 @@ async function loadChatRoom() {
 
 // Set up room listener
 function setupRoomListener() {
+    console.log('Setting up room listener');
+    
     // Listen for changes to the room
     roomListener = db.collection('chat_rooms').doc(roomId)
         .onSnapshot(doc => {
             if (!doc.exists) {
+                console.error('Room was deleted');
                 // Room was deleted
                 alert('This chat has ended');
                 window.location.href = '/dashboard.html';
@@ -211,6 +338,7 @@ function setupRoomListener() {
             
             // Check if room is still active
             if (!data.active) {
+                console.log('Chat ended by other user');
                 // Chat ended, redirect to dashboard
                 alert('This chat has ended');
                 window.location.href = '/dashboard.html';
@@ -224,19 +352,25 @@ function setupRoomListener() {
 // Load stranger profile
 async function loadStrangerProfile() {
     try {
+        console.log('Loading stranger profile');
+        
         // Get stranger's basic info
         const strangerDoc = await db.collection('waiting_users').doc(strangerId).get();
         
         if (strangerDoc.exists) {
+            console.log('Stranger found in waiting pool');
             // Stranger is still in waiting pool
             strangerProfile = strangerDoc.data();
         } else {
+            console.log('Stranger not in waiting pool, checking users collection');
             // Get from users collection or create basic profile
             const userDoc = await db.collection('users').doc(strangerId).get();
             
             if (userDoc.exists) {
+                console.log('Stranger found in users collection');
                 strangerProfile = userDoc.data();
             } else {
+                console.log('Creating basic profile for stranger');
                 // Create basic profile
                 strangerProfile = {
                     id: strangerId,
@@ -246,8 +380,12 @@ async function loadStrangerProfile() {
             }
         }
         
+        console.log('Stranger profile:', strangerProfile);
+        
         // Update UI
-        strangerUsername.textContent = strangerProfile.username;
+        if (strangerUsername) {
+            strangerUsername.textContent = strangerProfile.username;
+        }
         
         // Calculate common interests
         const userMetadata = await window.authClient.getUserMetadata();
@@ -255,6 +393,8 @@ async function loadStrangerProfile() {
             commonInterests = userMetadata.interests.filter(interest => 
                 strangerProfile.interests.includes(interest)
             );
+            
+            console.log('Common interests:', commonInterests);
             
             // Update common interests UI
             updateCommonInterestsUI();
@@ -267,16 +407,26 @@ async function loadStrangerProfile() {
             username: 'Anonymous',
             interests: []
         };
-        strangerUsername.textContent = strangerProfile.username;
+        if (strangerUsername) {
+            strangerUsername.textContent = strangerProfile.username;
+        }
     }
 }
 
 // Update common interests UI
 function updateCommonInterestsUI() {
+    console.log('Updating common interests UI');
+    
     // Clear container
+    if (!commonInterestsContainer) {
+        console.warn('Common interests container not found');
+        return;
+    }
+    
     commonInterestsContainer.innerHTML = '';
     
     if (commonInterests.length === 0) {
+        console.log('No common interests found');
         // No common interests
         const noInterests = document.createElement('p');
         noInterests.textContent = 'No common interests found';
@@ -295,7 +445,14 @@ function updateCommonInterestsUI() {
 
 // Toggle interests panel
 function toggleInterestsPanel() {
+    console.log('Toggling interests panel');
+    
     isCommonInterestsPanelOpen = !isCommonInterestsPanelOpen;
+    
+    if (!commonInterestsPanel) {
+        console.warn('Common interests panel not found');
+        return;
+    }
     
     if (isCommonInterestsPanelOpen) {
         commonInterestsPanel.classList.add('open');
@@ -306,6 +463,8 @@ function toggleInterestsPanel() {
 
 // Set up messages listener
 function setupMessagesListener() {
+    console.log('Setting up messages listener');
+    
     // Listen for new messages
     messagesListener = db.collection('chat_rooms').doc(roomId)
         .collection('messages')
@@ -315,6 +474,7 @@ function setupMessagesListener() {
                 if (change.type === 'added') {
                     // New message added
                     const message = change.doc.data();
+                    console.log('New message:', message);
                     addMessageToUI(message);
                 }
             });
@@ -328,6 +488,13 @@ function setupMessagesListener() {
 
 // Add message to UI
 function addMessageToUI(message) {
+    console.log('Adding message to UI:', message);
+    
+    if (!chatMessages) {
+        console.warn('Chat messages container not found');
+        return;
+    }
+    
     const messageElement = document.createElement('div');
     messageElement.classList.add('message');
     
@@ -351,6 +518,9 @@ function addMessageToUI(message) {
     messageElement.appendChild(messageBubble);
     
     chatMessages.appendChild(messageElement);
+    
+    // Scroll to bottom
+    scrollToBottom();
 }
 
 // Format timestamp
@@ -366,11 +536,20 @@ function formatTimestamp(timestamp) {
 
 // Scroll to bottom of chat
 function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (chatMessages) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 }
 
 // Send message
 async function sendMessage() {
+    console.log('Sending message');
+    
+    if (!messageInput) {
+        console.warn('Message input not found');
+        return;
+    }
+    
     const text = messageInput.value.trim();
     
     if (!text) return;
@@ -378,6 +557,13 @@ async function sendMessage() {
     try {
         // Clear input
         messageInput.value = '';
+        
+        // Check if we're in demo mode
+        if (USE_DEMO_MODE && roomId.startsWith('demo-')) {
+            console.log('Demo mode - handling demo message');
+            handleDemoMessage(text);
+            return;
+        }
         
         // Add message to database
         await db.collection('chat_rooms').doc(roomId)
@@ -388,17 +574,73 @@ async function sendMessage() {
                 senderName: userProfile.username,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
+            
+        console.log('Message sent successfully');
     } catch (error) {
         console.error('Error sending message:', error);
         alert('Error sending message. Please try again.');
     }
 }
 
+// Handle demo message
+function handleDemoMessage(text) {
+    console.log('Handling demo message:', text);
+    
+    // Add outgoing message to UI
+    const outgoingMessage = {
+        text: text,
+        senderId: userId,
+        timestamp: new Date()
+    };
+    
+    addMessageToUI(outgoingMessage);
+    
+    // Generate a response after a short delay
+    setTimeout(() => {
+        const responses = [
+            "That's interesting! Tell me more.",
+            "I've been thinking about that too!",
+            "I see what you mean. What do you think about...",
+            "That's cool! Have you always been interested in that?",
+            "I totally agree with you!",
+            "Interesting perspective. I hadn't thought of it that way.",
+            "What made you think of that?",
+            "I'm curious to hear more about your thoughts on this.",
+            "That reminds me of something I read recently.",
+            "I've had a similar experience!"
+        ];
+        
+        // Pick a random response
+        const responseIndex = Math.floor(Math.random() * responses.length);
+        const responseText = responses[responseIndex];
+        
+        // Add incoming message to UI
+        const incomingMessage = {
+            text: responseText,
+            senderId: strangerId,
+            timestamp: new Date()
+        };
+        
+        addMessageToUI(incomingMessage);
+    }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
+}
+
 // Skip chat
 async function skipChat() {
+    console.log('Skipping chat');
+    
     try {
         // Close modal
-        skipModal.style.display = 'none';
+        if (skipModal) {
+            skipModal.style.display = 'none';
+        }
+        
+        // If in demo mode, just redirect to dashboard
+        if (USE_DEMO_MODE && roomId.startsWith('demo-')) {
+            console.log('Demo mode - ending demo chat');
+            window.location.href = '/dashboard.html';
+            return;
+        }
         
         // End current chat
         await endChat();
@@ -414,6 +656,14 @@ async function skipChat() {
 // End chat
 async function endChat() {
     try {
+        console.log('Ending chat');
+        
+        // If in demo mode, just return
+        if (USE_DEMO_MODE && roomId.startsWith('demo-')) {
+            console.log('Demo mode - no need to end chat in database');
+            return true;
+        }
+        
         // Clean up listeners
         if (messagesListener) {
             messagesListener();
@@ -439,6 +689,7 @@ async function endChat() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         
+        console.log('Chat ended successfully');
         return true;
     } catch (error) {
         console.error('Error ending chat:', error);

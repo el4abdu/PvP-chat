@@ -46,6 +46,7 @@ build/Release
 
 # Dependency directories
 node_modules/
+jspm_packages/
 
 # Optional npm cache directory
 .npm
@@ -67,3 +68,44 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Build outputs
+dist/
+build/
+out/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Log files
+ui-debug.log*
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+firebase-adminsdk.json
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Clerk environment variables
+.clerk.json
