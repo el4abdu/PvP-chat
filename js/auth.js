@@ -1,6 +1,6 @@
 // Clerk Authentication Setup
 const CLERK_PUBLISHABLE_KEY = 'pk_test_bm92ZWwtc3RhZy05LmNsZXJrLmFjY291bnRzLmRldiQ'; // Clerk publishable key
-const USE_DEMO_MODE = true; // Set to true to use demo mode without Clerk authentication
+const USE_DEMO_MODE = false; // Set to false to use Clerk authentication
 
 // Create a global auth client for use throughout the application
 window.authClient = null;
@@ -20,6 +20,7 @@ function initializeClerk() {
         // Add Clerk script if not already present
         if (typeof window.Clerk === 'undefined') {
             console.log('Loading Clerk script');
+            // Load Clerk SDK
             const script = document.createElement('script');
             script.src = 'https://cdn.clerk.dev/v1/clerk.js';
             script.async = true;
@@ -380,10 +381,25 @@ function setupAuthButtons() {
         getStartedBtn.addEventListener('click', () => {
             console.log('Get started button clicked');
             
-            // Show the onboarding modal directly, skip Clerk
-            const onboardingModal = document.getElementById('onboarding-modal');
-            if (onboardingModal) {
-                onboardingModal.style.display = 'flex';
+            if (USE_DEMO_MODE) {
+                // In demo mode, show the onboarding modal
+                const onboardingModal = document.getElementById('onboarding-modal');
+                if (onboardingModal) {
+                    onboardingModal.style.display = 'flex';
+                }
+                return;
+            }
+            
+            // Use Clerk for authentication - open signup modal
+            if (window.Clerk) {
+                console.log('Opening Clerk SignUp');
+                window.Clerk.openSignUp();
+            } else {
+                console.error('Clerk not loaded yet');
+                showErrorMessage('Authentication system is loading. Please try again in a moment.');
+                
+                // Try to load Clerk if not available
+                initializeClerk();
             }
         });
     }
@@ -418,20 +434,19 @@ function setupClerkListeners() {
     console.log('Setting up Clerk listeners');
     if (window.Clerk && window.Clerk.addListener) {
         window.Clerk.addListener({
-            signedIn: () => {
-                console.log('User signed in');
-                // Check if user has completed profile
+            signedIn: (user) => {
+                console.log('User signed in', user);
+                
+                // Check if this is a new sign up (doesn't have metadata yet)
                 checkProfileCompletion(window.Clerk.user).then(isComplete => {
                     if (isComplete) {
-                        // User has completed profile, redirect to chat
+                        // User has completed profile, redirect to chat directly
                         showSuccessMessage('Signed in successfully!');
-                        
-                        // Redirect to chat after a short delay
                         setTimeout(() => {
                             redirectToChatPage();
                         }, 1000);
                     } else {
-                        // User hasn't completed profile, show onboarding modal
+                        // This is a new sign up, show onboarding modal
                         showOnboardingModal();
                     }
                 });
@@ -585,6 +600,72 @@ document.addEventListener('DOMContentLoaded', () => {
                         completeOnboarding.textContent = 'Complete Profile';
                         completeOnboarding.disabled = false;
                     }
+                }
+            } else {
+                console.error('Auth client not available');
+                alert('Authentication error. Please refresh the page and try again.');
+            }
+        });
+    }
+});
+
+// Update the onboarding form to redirect to chat.html instead of dashboard
+document.addEventListener('DOMContentLoaded', () => {
+    const completeProfileBtn = document.getElementById('complete-profile-btn');
+    
+    if (completeProfileBtn) {
+        completeProfileBtn.addEventListener('click', async function() {
+            const username = document.getElementById('username').value;
+            const age = document.getElementById('age').value;
+            const gender = document.querySelector('input[name="gender"]:checked');
+            
+            if (!username || !age || !gender) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            if (parseInt(age) < 18) {
+                alert('You must be 18 or older to use this platform');
+                return;
+            }
+            
+            // Save user data
+            if (window.authClient) {
+                try {
+                    // Show loading state
+                    completeProfileBtn.textContent = 'Saving...';
+                    completeProfileBtn.disabled = true;
+                    
+                    // Save metadata with a default interest
+                    await window.authClient.saveUserMetadata({
+                        username: username,
+                        age: parseInt(age),
+                        gender: gender.value,
+                        interests: ['chat'] // Default interest
+                    });
+                    
+                    // Close modal
+                    const onboardingModal = document.getElementById('onboarding-modal');
+                    if (onboardingModal) {
+                        onboardingModal.style.display = 'none';
+                    }
+                    
+                    // Show success message
+                    const successMessage = document.createElement('div');
+                    successMessage.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #2ecc71; color: white; padding: 15px; border-radius: 5px; z-index: 9999; max-width: 300px;';
+                    successMessage.textContent = 'Profile created successfully! Redirecting...';
+                    document.body.appendChild(successMessage);
+                    
+                    // Redirect after 1.5 seconds
+                    setTimeout(() => {
+                        document.body.removeChild(successMessage);
+                        redirectToChatPage();
+                    }, 1500);
+                } catch (error) {
+                    console.error('Error saving profile:', error);
+                    alert('Error saving profile. Please try again.');
+                    completeProfileBtn.textContent = 'Complete Profile';
+                    completeProfileBtn.disabled = false;
                 }
             } else {
                 console.error('Auth client not available');
