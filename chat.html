@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - ChatConnect</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <button id="back-btn" class="btn-icon">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="stranger-info">
+                    <h3 id="stranger-username">Anonymous</h3>
+                    <div class="stranger-details">
+                        <span id="connection-status">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-header-actions">
+                <button id="toggle-interests-btn" class="btn-icon" title="View common interests">
+                    <i class="fas fa-tags"></i>
+                </button>
+                <button id="skip-btn" class="btn-icon" title="Skip to next person">
+                    <i class="fas fa-forward"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="common-interests-panel" class="common-interests-panel">
+            <h4>Common Interests</h4>
+            <div id="common-interests-container" class="interests-container">
+                <!-- Common interests will be populated here -->
+            </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+            <div class="chat-start-info">
+                <p>You are now chatting with a random stranger</p>
+                <p class="chat-tip">Say hello to start the conversation!</p>
+            </div>
+            <!-- Messages will be populated here -->
+        </div>
+
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            <button id="send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirm Skip Modal -->
+    <div id="skip-modal" class="modal">
+        <div class="modal-content">
+            <h3>End this conversation?</h3>
+            <p>You will be connected to another random person.</p>
+            <div class="modal-actions">
+                <button id="cancel-skip-btn" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-skip-btn" class="btn btn-primary">Yes, find someone else</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html> 
