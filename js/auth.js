@@ -31,12 +31,28 @@ function initializeClerk() {
                 if (window.Clerk.user) {
                     console.log('User is signed in:', window.Clerk.user.id);
                     
-                    // User is signed in, redirect to dashboard if on landing page
-                    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-                        window.location.href = '/dashboard.html';
-                    }
+                    // Check if user has completed profile
+                    checkProfileCompletion(window.Clerk.user).then(isComplete => {
+                        if (isComplete) {
+                            // User has completed profile, redirect to chat directly
+                            if (window.location.pathname === '/' || 
+                                window.location.pathname === '/index.html' || 
+                                window.location.pathname === '/dashboard.html') {
+                                redirectToChatPage();
+                            }
+                        } else {
+                            // User hasn't completed profile, direct to dashboard if on home page
+                            if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+                                window.location.href = '/dashboard.html';
+                            } else if (window.location.pathname === '/dashboard.html') {
+                                // Already on dashboard, show onboarding modal if needed
+                                showOnboardingModal();
+                            }
+                        }
+                    });
                 } else {
                     console.log('User is not signed in');
+                    
                     // User is not signed in, redirect to home if on protected page
                     if (window.location.pathname !== '/' && 
                         window.location.pathname !== '/index.html' && 
@@ -65,6 +81,39 @@ function initializeClerk() {
     }
 }
 
+// Redirect to chat page
+function redirectToChatPage() {
+    // Create a chat room with a random ID
+    const randomRoomId = 'room-' + Math.random().toString(36).substring(2, 10);
+    
+    // Redirect to chat page
+    window.location.href = `/chat.html?action=start-new`;
+}
+
+// Check if user has completed profile
+async function checkProfileCompletion(user) {
+    if (!user) return false;
+    
+    try {
+        // Get metadata from Clerk
+        const metadata = user.publicMetadata || {};
+        
+        // Check if user has completed profile
+        return !!(metadata.username && metadata.age && metadata.gender && metadata.interests?.length >= 3);
+    } catch (error) {
+        console.error('Error checking profile completion:', error);
+        return false;
+    }
+}
+
+// Show onboarding modal
+function showOnboardingModal() {
+    const onboardingModal = document.getElementById('onboarding-modal');
+    if (onboardingModal) {
+        onboardingModal.style.display = 'flex';
+    }
+}
+
 // Setup demo mode for testing without Clerk
 function setupDemoMode() {
     console.log('Setting up demo mode');
@@ -72,13 +121,13 @@ function setupDemoMode() {
     // Create a mock user
     const demoUser = {
         id: 'demo-user-' + Math.floor(Math.random() * 100000),
-        username: 'DemoUser',
-        firstName: 'Demo',
-        lastName: 'User',
+        username: '',
+        firstName: '',
+        lastName: '',
         email: 'demo@example.com',
         imageUrl: null,
         publicMetadata: {
-            interests: ['technology', 'music', 'movies']
+            interests: []
         }
     };
     
@@ -88,7 +137,7 @@ function setupDemoMode() {
             console.log('Demo: getUserProfile called');
             return {
                 id: demoUser.id,
-                username: demoUser.username,
+                username: demoUser.username || 'Anonymous',
                 email: demoUser.email,
                 avatar: demoUser.imageUrl
             };
@@ -100,6 +149,9 @@ function setupDemoMode() {
             return new Promise(resolve => {
                 setTimeout(() => {
                     resolve({
+                        username: demoUser.username,
+                        age: demoUser.publicMetadata.age,
+                        gender: demoUser.publicMetadata.gender,
                         interests: demoUser.publicMetadata.interests
                     });
                 }, 100);
@@ -112,9 +164,30 @@ function setupDemoMode() {
             return new Promise(resolve => {
                 setTimeout(() => {
                     // Update demo user metadata
-                    if (metadata.interests) {
-                        demoUser.publicMetadata.interests = metadata.interests;
+                    if (metadata.username) demoUser.username = metadata.username;
+                    if (metadata.interests) demoUser.publicMetadata.interests = metadata.interests;
+                    if (metadata.age) demoUser.publicMetadata.age = metadata.age;
+                    if (metadata.gender) demoUser.publicMetadata.gender = metadata.gender;
+                    
+                    // Save to Firebase if available
+                    if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                        try {
+                            const db = firebase.firestore();
+                            db.collection('users').doc(demoUser.id).set({
+                                id: demoUser.id,
+                                username: demoUser.username,
+                                email: demoUser.email,
+                                age: demoUser.publicMetadata.age,
+                                gender: demoUser.publicMetadata.gender,
+                                interests: demoUser.publicMetadata.interests,
+                                created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                            }, { merge: true });
+                        } catch (error) {
+                            console.error('Error saving to Firebase:', error);
+                        }
                     }
+                    
                     resolve(true);
                 }, 300);
             });
@@ -125,6 +198,10 @@ function setupDemoMode() {
             setTimeout(() => {
                 window.location.href = '/';
             }, 300);
+        },
+        
+        getUser: () => {
+            return demoUser;
         }
     };
     
@@ -132,7 +209,30 @@ function setupDemoMode() {
     setupAuthButtons();
     
     console.log('Demo mode setup complete');
-    showSuccessMessage('Demo mode active. No authentication required.');
+    
+    // Check if we need profile completion
+    const needsProfile = !(demoUser.username && demoUser.publicMetadata.age && 
+                         demoUser.publicMetadata.gender && demoUser.publicMetadata.interests?.length >= 3);
+                         
+    // Show onboarding if needed
+    if (needsProfile) {
+        if (window.location.pathname === '/') {
+            // On homepage - Let the DOM load fully before showing modal
+            setTimeout(() => {
+                showOnboardingModal();
+            }, 1000);
+        } else if (window.location.pathname === '/dashboard.html') {
+            // Already on dashboard - do nothing
+        } else if (!window.location.pathname.includes('chat.html')) {
+            // Not on chat page or dashboard - redirect to dashboard
+            window.location.href = '/dashboard.html';
+        }
+    } else {
+        // Profile complete, redirect to chat if not already on chat page
+        if (!window.location.pathname.includes('chat.html')) {
+            redirectToChatPage();
+        }
+    }
 }
 
 // Set up the auth client wrapper around Clerk
@@ -166,12 +266,34 @@ function setupAuthClient() {
             if (!window.Clerk || !window.Clerk.user) return false;
             
             try {
+                // Update Clerk metadata
                 await window.Clerk.user.update({
                     publicMetadata: {
                         ...window.Clerk.user.publicMetadata,
                         ...metadata
                     }
                 });
+                
+                // Also save to Firebase if available
+                if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                    try {
+                        const db = firebase.firestore();
+                        const userProfile = this.getUserProfile();
+                        
+                        db.collection('users').doc(userProfile.id).set({
+                            id: userProfile.id,
+                            username: metadata.username || userProfile.username,
+                            email: userProfile.email,
+                            age: metadata.age || window.Clerk.user.publicMetadata.age,
+                            gender: metadata.gender || window.Clerk.user.publicMetadata.gender,
+                            interests: metadata.interests || window.Clerk.user.publicMetadata.interests || [],
+                            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    } catch (error) {
+                        console.error('Error saving to Firebase:', error);
+                    }
+                }
+                
                 return true;
             } catch (error) {
                 console.error('Error saving user metadata:', error);
@@ -187,6 +309,10 @@ function setupAuthClient() {
             } else {
                 window.location.href = '/';
             }
+        },
+        
+        getUser: () => {
+            return window.Clerk?.user || null;
         }
     };
 }
@@ -226,109 +352,47 @@ function showSuccessMessage(message) {
 // Set up auth buttons
 function setupAuthButtons() {
     console.log('Setting up auth buttons');
-    const signInBtn = document.getElementById('sign-in-btn');
-    const signUpBtn = document.getElementById('sign-up-btn');
     const getStartedBtn = document.getElementById('get-started-btn');
-    const clerkModal = document.getElementById('clerk-modal');
-    const closeModal = document.querySelector('.close-modal');
-    const clerkAuthContainer = document.getElementById('clerk-auth-container');
+    const ctaBtn = document.getElementById('cta-btn');
     const signOutBtn = document.getElementById('sign-out-btn');
 
-    if (signInBtn) {
-        signInBtn.addEventListener('click', () => {
-            console.log('Sign in button clicked');
-            if (USE_DEMO_MODE) {
-                // In demo mode, just redirect to dashboard
-                showSuccessMessage('Demo login successful');
-                setTimeout(() => {
-                    window.location.href = '/dashboard.html';
-                }, 1000);
-                return;
-            }
-            
-            if (clerkModal) clerkModal.style.display = 'flex';
-            if (window.Clerk && window.Clerk.openSignIn) {
-                window.Clerk.openSignIn({
-                    containerEl: clerkAuthContainer
-                });
-            } else {
-                if (clerkAuthContainer) {
-                    clerkAuthContainer.innerHTML = '<div style="text-align: center;"><p>Sign In is not available right now.</p><p>Please try again later.</p></div>';
-                }
-            }
-        });
-    }
-
-    if (signUpBtn) {
-        signUpBtn.addEventListener('click', () => {
-            console.log('Sign up button clicked');
-            if (USE_DEMO_MODE) {
-                // In demo mode, just redirect to dashboard
-                showSuccessMessage('Demo account created successfully');
-                setTimeout(() => {
-                    window.location.href = '/dashboard.html';
-                }, 1000);
-                return;
-            }
-            
-            if (clerkModal) clerkModal.style.display = 'flex';
-            if (window.Clerk && window.Clerk.openSignUp) {
-                window.Clerk.openSignUp({
-                    containerEl: clerkAuthContainer
-                });
-            } else {
-                if (clerkAuthContainer) {
-                    clerkAuthContainer.innerHTML = '<div style="text-align: center;"><p>Sign Up is not available right now.</p><p>Please try again later.</p></div>';
-                }
-            }
-        });
-    }
-
+    // Get Started button
     if (getStartedBtn) {
         getStartedBtn.addEventListener('click', () => {
             console.log('Get started button clicked');
+            
             if (USE_DEMO_MODE) {
-                // In demo mode, just redirect to dashboard
-                showSuccessMessage('Welcome to PvP Chat!');
-                setTimeout(() => {
-                    window.location.href = '/dashboard.html';
-                }, 1000);
+                // In demo mode, show the onboarding modal
+                const onboardingModal = document.getElementById('onboarding-modal');
+                if (onboardingModal) {
+                    onboardingModal.style.display = 'flex';
+                }
                 return;
             }
             
-            if (clerkModal) clerkModal.style.display = 'flex';
-            if (window.Clerk && window.Clerk.openSignUp) {
+            // For Clerk auth, show Clerk modal
+            if (window.Clerk) {
                 window.Clerk.openSignUp({
-                    containerEl: clerkAuthContainer
+                    redirectUrl: '/',
+                    afterSignUpUrl: '/'
                 });
             } else {
-                if (clerkAuthContainer) {
-                    clerkAuthContainer.innerHTML = '<div style="text-align: center;"><p>Sign Up is not available right now.</p><p>Please try again later.</p></div>';
-                }
-            }
-        });
-    }
-
-    if (closeModal) {
-        closeModal.addEventListener('click', () => {
-            console.log('Close modal clicked');
-            if (clerkModal) clerkModal.style.display = 'none';
-            if (clerkAuthContainer) clerkAuthContainer.innerHTML = '';
-        });
-    }
-
-    // Close modal when clicking outside the content
-    if (clerkModal) {
-        clerkModal.addEventListener('click', (e) => {
-            if (e.target === clerkModal) {
-                console.log('Clicked outside modal content');
-                clerkModal.style.display = 'none';
-                if (clerkAuthContainer) clerkAuthContainer.innerHTML = '';
+                showErrorMessage('Authentication service not available');
             }
         });
     }
     
-    // Handle sign out
+    // CTA button
+    if (ctaBtn) {
+        ctaBtn.addEventListener('click', () => {
+            console.log('CTA button clicked');
+            if (getStartedBtn) {
+                getStartedBtn.click();
+            }
+        });
+    }
+    
+    // Sign out button
     if (signOutBtn) {
         signOutBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -349,9 +413,26 @@ function setupClerkListeners() {
     if (window.Clerk && window.Clerk.addListener) {
         window.Clerk.addListener({
             signedIn: () => {
-                console.log('User signed in, redirecting to dashboard');
-                // User just signed in, redirect to dashboard
-                window.location.href = '/dashboard.html';
+                console.log('User signed in');
+                // Check if user has completed profile
+                checkProfileCompletion(window.Clerk.user).then(isComplete => {
+                    if (isComplete) {
+                        // User has completed profile, redirect to chat
+                        showSuccessMessage('Signed in successfully!');
+                        
+                        // Redirect to chat after a short delay
+                        setTimeout(() => {
+                            redirectToChatPage();
+                        }, 1000);
+                    } else {
+                        // User hasn't completed profile, show onboarding modal or go to dashboard
+                        if (window.location.pathname === '/dashboard.html') {
+                            showOnboardingModal();
+                        } else {
+                            window.location.href = '/dashboard.html';
+                        }
+                    }
+                });
             },
             signedOut: () => {
                 console.log('User signed out, redirecting to home');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PvP Chat - Meet New People</title>
+    <title>PvP Chat - Connect with Strangers</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
@@ -46,188 +46,391 @@
             }
         });
     </script>
-    <style>
-        /* Fix modal display */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal.show {
-            display: flex;
-        }
-        
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-        }
-        
-        .close-modal {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <span class="logo-icon">💬</span>
-                <span class="logo-text">PvP Chat</span>
-            </div>
-            <nav>
-                <ul>
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#faq">FAQ</a></li>
-                </ul>
-            </nav>
-            <div class="auth-buttons">
-                <button id="sign-in-btn" class="btn btn-primary">Sign In</button>
-                <button id="sign-up-btn" class="btn btn-secondary">Sign Up</button>
+    <div class="landing-page">
+        <header class="modern-header">
+            <div class="container">
+                <div class="logo">
+                    <span class="logo-icon">💬</span>
+                    <span class="logo-text">PvP Chat</span>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                    </ul>
+                </nav>
             </div>
         </header>
 
-        <main>
-            <section class="hero">
+        <section class="hero-section glass-container">
+            <div class="container">
                 <div class="hero-content">
-                    <h1>Connect With Strangers Around The World</h1>
-                    <p>Make new friends, share experiences, and engage in meaningful conversations</p>
-                    <button id="get-started-btn" class="btn btn-large">Get Started</button>
+                    <h1 class="hero-title">Connect With People <span class="highlight">Around The World</span></h1>
+                    <p class="hero-description">Make new friends, share experiences, and engage in meaningful conversations based on common interests</p>
+                    <button id="get-started-btn" class="btn-modern">Get Started Now</button>
                 </div>
                 <div class="hero-image">
                     <img src="https://source.unsplash.com/random/600x400/?chat" alt="People chatting">
+                    <div class="floating-badge">
+                        <span class="pulse"></span>
+                        <span>1,000+ Online</span>
+                    </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <section id="features" class="features">
-                <h2>Why Choose PvP Chat?</h2>
+        <section id="features" class="features-section">
+            <div class="container">
+                <h2 class="section-title">Why Choose PvP Chat?</h2>
                 <div class="feature-cards">
-                    <div class="feature-card">
+                    <div class="card-modern feature-card">
                         <div class="feature-icon">🔒</div>
                         <h3>Secure Conversations</h3>
                         <p>Your privacy matters. All chats are end-to-end encrypted.</p>
                     </div>
-                    <div class="feature-card">
+                    <div class="card-modern feature-card">
                         <div class="feature-icon">🌍</div>
                         <h3>Global Community</h3>
                         <p>Connect with people from all around the world.</p>
                     </div>
-                    <div class="feature-card">
+                    <div class="card-modern feature-card">
                         <div class="feature-icon">💯</div>
-                        <h3>Quality Matching</h3>
+                        <h3>Interest Matching</h3>
                         <p>Find people who share your interests and perspectives.</p>
                     </div>
                 </div>
-            </section>
-        </main>
+            </div>
+        </section>
+
+        <section id="about" class="about-section glass-container">
+            <div class="container">
+                <h2 class="section-title">How It Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h3>Create Your Profile</h3>
+                        <p>Tell us about yourself and your interests</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h3>Find Your Match</h3>
+                        <p>We'll connect you with like-minded people</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h3>Start Chatting</h3>
+                        <p>Engage in meaningful conversations</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="faq-section">
+            <div class="container">
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <div class="faq-container">
+                    <div class="faq-item card-modern">
+                        <h3 class="faq-question">Is PvP Chat free to use?</h3>
+                        <p class="faq-answer">Yes, PvP Chat is completely free for all users. We may introduce premium features in the future, but the core functionality will always remain free.</p>
+                    </div>
+                    <div class="faq-item card-modern">
+                        <h3 class="faq-question">How does the matching system work?</h3>
+                        <p class="faq-answer">Our intelligent algorithm matches you with people who share similar interests. The more interests you add to your profile, the better matches you'll receive.</p>
+                    </div>
+                    <div class="faq-item card-modern">
+                        <h3 class="faq-question">Is my information safe?</h3>
+                        <p class="faq-answer">Absolutely. We take privacy very seriously and use end-to-end encryption for all conversations. Your personal information is never shared with third parties.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-section glass-container">
+            <div class="container">
+                <h2 class="cta-title">Ready to start connecting?</h2>
+                <p class="cta-description">Join thousands of people already chatting on PvP Chat</p>
+                <button id="cta-btn" class="btn-modern">Get Started Now</button>
+            </div>
+        </section>
 
         <footer>
-            <p>&copy; 2024 PvP Chat. All rights reserved.</p>
-            <div class="footer-links">
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Contact Us</a>
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-logo">
+                        <span class="logo-icon">💬</span>
+                        <span class="logo-text">PvP Chat</span>
+                    </div>
+                    <div class="footer-links">
+                        <div class="footer-column">
+                            <h4>Company</h4>
+                            <ul>
+                                <li><a href="#">About Us</a></li>
+                                <li><a href="#">Careers</a></li>
+                                <li><a href="#">Contact Us</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-column">
+                            <h4>Legal</h4>
+                            <ul>
+                                <li><a href="#">Privacy Policy</a></li>
+                                <li><a href="#">Terms of Service</a></li>
+                                <li><a href="#">Cookie Policy</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-column">
+                            <h4>Support</h4>
+                            <ul>
+                                <li><a href="#">Help Center</a></li>
+                                <li><a href="#">Safety Center</a></li>
+                                <li><a href="#">Community Guidelines</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2024 PvP Chat. All rights reserved.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link">Twitter</a>
+                        <a href="#" class="social-link">Facebook</a>
+                        <a href="#" class="social-link">Instagram</a>
+                    </div>
+                </div>
             </div>
         </footer>
     </div>
 
-    <div id="clerk-modal" class="modal">
-        <div class="modal-content">
+    <div id="onboarding-modal" class="modal">
+        <div class="modal-content card-modern">
             <span class="close-modal">&times;</span>
-            <div id="clerk-auth-container"></div>
+            <div id="onboarding-container">
+                <h2>Create Your Profile</h2>
+                <p>Tell us a bit about yourself to get started</p>
+                
+                <form id="onboarding-form">
+                    <div class="form-step active" id="step-1">
+                        <div class="floating-input">
+                            <input type="text" id="username" name="username" placeholder=" " required>
+                            <label for="username">Username</label>
+                        </div>
+                        
+                        <div class="floating-input">
+                            <input type="number" id="age" name="age" min="18" max="99" placeholder=" " required>
+                            <label for="age">Age (18+)</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="gender" value="male" required>
+                                    <span class="radio-label">Male</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gender" value="female">
+                                    <span class="radio-label">Female</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gender" value="non-binary">
+                                    <span class="radio-label">Non-binary</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gender" value="prefer-not-to-say">
+                                    <span class="radio-label">Prefer not to say</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-navigation">
+                            <button type="button" id="next-to-interests" class="btn-modern">Next</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-step" id="step-2">
+                        <h3>Select Your Interests</h3>
+                        <p>Choose at least 3 interests to help us match you with like-minded people</p>
+                        
+                        <div class="interests-container" id="onboarding-interests">
+                            <div class="interest-tag" data-interest="music">Music</div>
+                            <div class="interest-tag" data-interest="gaming">Gaming</div>
+                            <div class="interest-tag" data-interest="movies">Movies</div>
+                            <div class="interest-tag" data-interest="technology">Technology</div>
+                            <div class="interest-tag" data-interest="sports">Sports</div>
+                            <div class="interest-tag" data-interest="books">Books</div>
+                            <div class="interest-tag" data-interest="travel">Travel</div>
+                            <div class="interest-tag" data-interest="food">Food</div>
+                            <div class="interest-tag" data-interest="fashion">Fashion</div>
+                            <div class="interest-tag" data-interest="art">Art</div>
+                            <div class="interest-tag" data-interest="science">Science</div>
+                            <div class="interest-tag" data-interest="programming">Programming</div>
+                            <div class="interest-tag" data-interest="photography">Photography</div>
+                            <div class="interest-tag" data-interest="fitness">Fitness</div>
+                            <div class="interest-tag" data-interest="politics">Politics</div>
+                            <div class="interest-tag" data-interest="history">History</div>
+                        </div>
+                        
+                        <div class="selected-count">
+                            Selected: <span id="interest-count">0</span>/3 minimum
+                        </div>
+                        
+                        <div class="form-navigation">
+                            <button type="button" id="back-to-profile" class="btn-secondary">Back</button>
+                            <button type="submit" id="complete-onboarding" class="btn-modern" disabled>Complete Profile</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light mode">🌙</button>
 
-    <div id="debug-panel" style="position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; max-width: 300px; z-index: 9999; font-family: monospace; font-size: 12px; display: none;">
-        <div>Debug Panel</div>
-        <div id="debug-log" style="max-height: 200px; overflow-y: auto;"></div>
-        <button onclick="document.getElementById('debug-panel').style.display='none'">Close</button>
-    </div>
-
-    <script>
-        // Show debug panel on key combination (Ctrl+Shift+D)
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-                document.getElementById('debug-panel').style.display = 'block';
-            }
-        });
-
-        // Add debug log function
-        function debugLog(message) {
-            const logElement = document.getElementById('debug-log');
-            const logEntry = document.createElement('div');
-            logEntry.textContent = new Date().toLocaleTimeString() + ': ' + message;
-            logElement.appendChild(logEntry);
-            logElement.scrollTop = logElement.scrollHeight;
-            console.log(message);
-        }
-
-        window.debugLog = debugLog;
-        
-        // Direct button handlers (bypassing Clerk if needed)
-        document.addEventListener('DOMContentLoaded', function() {
-            const signInBtn = document.getElementById('sign-in-btn');
-            const signUpBtn = document.getElementById('sign-up-btn');
-            const getStartedBtn = document.getElementById('get-started-btn');
-            const clerkModal = document.getElementById('clerk-modal');
-            const closeModal = document.querySelector('.close-modal');
-            
-            // Functions to show/hide modal directly
-            function showModal() {
-                clerkModal.classList.add('show');
-                debugLog('Modal opened');
-            }
-            
-            function hideModal() {
-                clerkModal.classList.remove('show');
-                debugLog('Modal closed');
-            }
-            
-            // Add direct event listeners
-            if (signInBtn) {
-                signInBtn.addEventListener('click', showModal);
-            }
-            
-            if (signUpBtn) {
-                signUpBtn.addEventListener('click', showModal);
-            }
-            
-            if (getStartedBtn) {
-                getStartedBtn.addEventListener('click', showModal);
-            }
-            
-            if (closeModal) {
-                closeModal.addEventListener('click', hideModal);
-            }
-            
-            // Close when clicking outside content
-            clerkModal.addEventListener('click', function(e) {
-                if (e.target === clerkModal) {
-                    hideModal();
-                }
-            });
-        });
-    </script>
-
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        // Handle CTA button
+        document.getElementById('cta-btn')?.addEventListener('click', function() {
+            document.getElementById('get-started-btn').click();
+        });
+        
+        // Onboarding
+        const getStartedBtn = document.getElementById('get-started-btn');
+        const onboardingModal = document.getElementById('onboarding-modal');
+        const closeModal = document.querySelector('.close-modal');
+        const nextToInterests = document.getElementById('next-to-interests');
+        const backToProfile = document.getElementById('back-to-profile');
+        const completeOnboarding = document.getElementById('complete-onboarding');
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const interestCount = document.getElementById('interest-count');
+        const interestTags = document.querySelectorAll('#onboarding-interests .interest-tag');
+        const onboardingForm = document.getElementById('onboarding-form');
+        
+        let selectedInterests = [];
+        
+        if (getStartedBtn) {
+            getStartedBtn.addEventListener('click', function() {
+                if (onboardingModal) {
+                    onboardingModal.style.display = 'flex';
+                }
+            });
+        }
+        
+        if (closeModal) {
+            closeModal.addEventListener('click', function() {
+                if (onboardingModal) {
+                    onboardingModal.style.display = 'none';
+                }
+            });
+        }
+        
+        if (nextToInterests) {
+            nextToInterests.addEventListener('click', function() {
+                const username = document.getElementById('username').value;
+                const age = document.getElementById('age').value;
+                const gender = document.querySelector('input[name="gender"]:checked');
+                
+                if (!username || !age || !gender) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+                
+                if (parseInt(age) < 18) {
+                    alert('You must be 18 or older to use this platform');
+                    return;
+                }
+                
+                step1.classList.remove('active');
+                step2.classList.add('active');
+            });
+        }
+        
+        if (backToProfile) {
+            backToProfile.addEventListener('click', function() {
+                step2.classList.remove('active');
+                step1.classList.add('active');
+            });
+        }
+        
+        if (interestTags) {
+            interestTags.forEach(tag => {
+                tag.addEventListener('click', function() {
+                    const interest = this.getAttribute('data-interest');
+                    
+                    if (this.classList.contains('active')) {
+                        // Remove interest
+                        this.classList.remove('active');
+                        selectedInterests = selectedInterests.filter(i => i !== interest);
+                    } else {
+                        // Add interest
+                        this.classList.add('active');
+                        selectedInterests.push(interest);
+                    }
+                    
+                    // Update count
+                    if (interestCount) {
+                        interestCount.textContent = selectedInterests.length;
+                    }
+                    
+                    // Enable/disable submit button
+                    if (completeOnboarding) {
+                        completeOnboarding.disabled = selectedInterests.length < 3;
+                    }
+                });
+            });
+        }
+        
+        if (onboardingForm) {
+            onboardingForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const age = document.getElementById('age').value;
+                const gender = document.querySelector('input[name="gender"]:checked').value;
+                
+                // Save user data
+                if (window.authClient) {
+                    try {
+                        // Show loading state
+                        completeOnboarding.textContent = 'Saving...';
+                        completeOnboarding.disabled = true;
+                        
+                        // Save metadata
+                        await window.authClient.saveUserMetadata({
+                            username: username,
+                            age: parseInt(age),
+                            gender: gender,
+                            interests: selectedInterests
+                        });
+                        
+                        // Close modal and redirect to dashboard
+                        onboardingModal.style.display = 'none';
+                        
+                        // Show success message
+                        const successMessage = document.createElement('div');
+                        successMessage.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #2ecc71; color: white; padding: 15px; border-radius: 5px; z-index: 9999; max-width: 300px;';
+                        successMessage.textContent = 'Profile created successfully! Redirecting...';
+                        document.body.appendChild(successMessage);
+                        
+                        // Redirect after 1.5 seconds
+                        setTimeout(() => {
+                            document.body.removeChild(successMessage);
+                            window.location.href = '/dashboard.html';
+                        }, 1500);
+                    } catch (error) {
+                        console.error('Error saving profile:', error);
+                        alert('Error saving profile. Please try again.');
+                        completeOnboarding.textContent = 'Complete Profile';
+                        completeOnboarding.disabled = false;
+                    }
+                } else {
+                    console.error('Auth client not available');
+                    alert('Authentication error. Please refresh the page and try again.');
+                }
+            });
+        }
+    </script>
 </body>
 </html> 

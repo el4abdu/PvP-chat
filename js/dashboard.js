@@ -36,6 +36,8 @@ const userAvatar = document.getElementById('user-avatar');
 const userEmail = document.getElementById('user-email');
 const userId = document.getElementById('user-id');
 const userJoined = document.getElementById('user-joined');
+const userAge = document.getElementById('user-age');
+const userGender = document.getElementById('user-gender');
 const interestsContainer = document.getElementById('interests-container');
 const saveInterestsBtn = document.getElementById('save-interests-btn');
 const randomChatBtn = document.getElementById('random-chat-btn');
@@ -44,6 +46,10 @@ const waitingScreen = document.getElementById('waiting-screen');
 const waitingTime = document.getElementById('waiting-time');
 const cancelWaitingBtn = document.getElementById('cancel-waiting-btn');
 const signOutBtn = document.getElementById('sign-out-btn');
+const editProfileBtn = document.getElementById('edit-profile-btn');
+const profileModal = document.getElementById('profile-modal');
+const closeProfileModal = document.getElementById('close-profile-modal');
+const profileForm = document.getElementById('profile-form');
 
 // Selected interests
 let selectedInterests = [];
@@ -146,11 +152,46 @@ function updateProfileUI(profile) {
 
 // Update metadata UI
 function updateMetadataUI(metadata) {
-    console.log('Updating metadata UI');
+    console.log('Updating metadata UI', metadata);
+    
+    // Update username if available in metadata
+    if (metadata.username && username) {
+        username.textContent = metadata.username;
+    }
+    
+    // Update age if available
+    if (metadata.age && userAge) {
+        userAge.textContent = metadata.age + ' years';
+    }
+    
+    // Update gender if available
+    if (metadata.gender && userGender) {
+        const genderText = metadata.gender.charAt(0).toUpperCase() + metadata.gender.slice(1);
+        userGender.textContent = genderText;
+    }
     
     if (metadata.interests && metadata.interests.length > 0) {
         selectedInterests = metadata.interests;
         updateInterestTags();
+    }
+    
+    // Update profile form if it exists
+    if (profileForm) {
+        const usernameInput = profileForm.querySelector('#profile-username');
+        const ageInput = profileForm.querySelector('#profile-age');
+        const genderSelect = profileForm.querySelector('#profile-gender');
+        
+        if (usernameInput && metadata.username) {
+            usernameInput.value = metadata.username;
+        }
+        
+        if (ageInput && metadata.age) {
+            ageInput.value = metadata.age;
+        }
+        
+        if (genderSelect && metadata.gender) {
+            genderSelect.value = metadata.gender;
+        }
     }
 }
 
@@ -268,22 +309,6 @@ function updateButtonsState() {
 function setupEventListeners() {
     console.log('Setting up event listeners');
     
-    // Sign out button
-    if (signOutBtn) {
-        signOutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('Sign out button clicked');
-            window.authClient.handleSignOut();
-        });
-    } else {
-        console.warn('Sign out button not found');
-    }
-    
-    // Save interests button
-    if (saveInterestsBtn) {
-        saveInterestsBtn.addEventListener('click', saveInterests);
-    }
-    
     // Random chat button
     if (randomChatBtn) {
         randomChatBtn.addEventListener('click', startRandomChat);
@@ -294,10 +319,96 @@ function setupEventListeners() {
         interestsChatBtn.addEventListener('click', startInterestsChat);
     }
     
+    // Save interests button
+    if (saveInterestsBtn) {
+        saveInterestsBtn.addEventListener('click', saveInterests);
+    }
+    
     // Cancel waiting button
     if (cancelWaitingBtn) {
         cancelWaitingBtn.addEventListener('click', cancelWaiting);
     }
+    
+    // Sign out button
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+            if (window.authClient) {
+                window.authClient.handleSignOut();
+            }
+        });
+    }
+    
+    // Edit profile button
+    if (editProfileBtn) {
+        editProfileBtn.addEventListener('click', () => {
+            if (profileModal) {
+                profileModal.style.display = 'flex';
+            }
+        });
+    }
+    
+    // Close profile modal
+    if (closeProfileModal) {
+        closeProfileModal.addEventListener('click', () => {
+            if (profileModal) {
+                profileModal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Profile form submission
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const usernameInput = profileForm.querySelector('#profile-username');
+            const ageInput = profileForm.querySelector('#profile-age');
+            const genderSelect = profileForm.querySelector('#profile-gender');
+            
+            const updateData = {};
+            
+            if (usernameInput && usernameInput.value.trim()) {
+                updateData.username = usernameInput.value.trim();
+            }
+            
+            if (ageInput && ageInput.value) {
+                updateData.age = parseInt(ageInput.value, 10);
+            }
+            
+            if (genderSelect && genderSelect.value) {
+                updateData.gender = genderSelect.value;
+            }
+            
+            console.log('Saving profile data:', updateData);
+            
+            try {
+                await window.authClient.saveUserMetadata(updateData);
+                console.log('Profile saved successfully');
+                
+                // Update UI
+                const metadata = await window.authClient.getUserMetadata();
+                updateMetadataUI(metadata);
+                
+                // Close modal
+                if (profileModal) {
+                    profileModal.style.display = 'none';
+                }
+                
+                // Show success message
+                showSuccessMessage('Profile updated successfully!');
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                showErrorMessage('Error saving profile: ' + error.message);
+            }
+        });
+    }
+    
+    // Click outside modal to close
+    window.addEventListener('click', (e) => {
+        if (e.target === profileModal) {
+            profileModal.style.display = 'none';
+        }
+    });
 }
 
 // Start random chat
@@ -596,4 +707,23 @@ function showErrorMessage(message) {
     
     // Fallback to alert
     alert(message);
+}
+
+// Show success message
+function showSuccessMessage(message) {
+    const successMessage = document.createElement('div');
+    successMessage.className = 'success-message';
+    successMessage.textContent = message;
+    document.body.appendChild(successMessage);
+    
+    setTimeout(() => {
+        successMessage.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        successMessage.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(successMessage);
+        }, 300);
+    }, 3000);
 } 

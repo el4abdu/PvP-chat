@@ -6,127 +6,321 @@
     <title>PvP Chat - Chat Room</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-firestore.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-analytics.js"></script>
     <script src="js/auth.js"></script>
 </head>
-<body>
-    <div class="modern-messaging-layout">
-        <div class="modern-messaging-sidebar">
-            <div class="user-profile">
-                <div class="profile-avatar">
-                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=random" alt="Avatar" id="user-avatar">
+<body class="chat-page">
+    <div class="chitchat-layout">
+        <!-- Left Sidebar -->
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">💬</div>
+                    <div class="logo-text">PvP Chat</div>
                 </div>
-                <div class="profile-info">
-                    <h3 id="user-username">Loading...</h3>
+                <div class="user-quick-actions">
+                    <button id="theme-toggle" class="icon-button" title="Toggle dark/light mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="settings-btn" class="icon-button" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
                 </div>
-                <button id="back-btn" class="btn-modern">Back to Dashboard</button>
             </div>
             
-            <div class="interests-section">
-                <h3>Common Interests</h3>
-                <div id="common-interests-panel" class="glass-container">
-                    <div id="common-interests-container" class="interests-container">
-                        <div class="loader"></div>
+            <div class="user-profile-compact">
+                <div class="avatar-container">
+                    <img id="user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=random" alt="Your avatar">
+                    <span class="status-indicator online"></span>
+                </div>
+                <div class="user-info">
+                    <h3 id="user-username">Loading...</h3>
+                    <p class="user-status">Online</p>
+                </div>
+                <button id="edit-profile-btn" class="icon-button">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+            
+            <div class="chat-filters">
+                <button class="filter-button active" data-filter="all">
+                    <i class="fas fa-comments"></i> All Chats
+                </button>
+                <button class="filter-button" data-filter="active">
+                    <i class="fas fa-signal"></i> Active
+                </button>
+                <button class="filter-button" data-filter="unread">
+                    <i class="fas fa-bell"></i> Unread
+                </button>
+            </div>
+            
+            <div class="chat-search">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" placeholder="Search conversations..." id="chat-search-input">
+                </div>
+            </div>
+            
+            <div class="chat-list" id="chat-list">
+                <!-- Chat list items will be generated dynamically -->
+                <div class="chat-list-placeholder">
+                    <p>No active conversations.</p>
+                    <p>Start a new chat to begin!</p>
+                </div>
+            </div>
+            
+            <div class="new-chat-actions">
+                <button id="new-chat-btn" class="new-chat-button">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="chat-main">
+            <div class="chat-header glass-container">
+                <div class="chat-header-info">
+                    <div class="chat-partner-info">
+                        <div class="avatar-container">
+                            <img id="stranger-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=random2" alt="Stranger avatar">
+                            <span class="status-indicator online"></span>
+                        </div>
+                        <div>
+                            <h3 id="stranger-username">Connecting...</h3>
+                            <p id="connection-status">Finding a match...</p>
+                        </div>
                     </div>
                 </div>
-                <button id="toggle-interests-btn" class="btn-modern">View Common Interests</button>
+                <div class="chat-header-actions">
+                    <button id="voice-chat-btn" class="icon-button" title="Voice chat">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button id="video-chat-btn" class="icon-button" title="Video chat">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button id="interests-btn" class="icon-button" title="Common interests">
+                        <i class="fas fa-tags"></i>
+                    </button>
+                    <button id="mute-btn" class="icon-button" title="Mute notifications">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <button id="report-btn" class="icon-button danger" title="Report user">
+                        <i class="fas fa-flag"></i>
+                    </button>
+                    <button id="skip-btn" class="icon-button danger" title="Skip chat">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
             
-            <div class="chat-actions">
-                <button id="skip-btn" class="btn-modern" title="Skip this chat and find someone else">Skip Chat</button>
-                <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light mode">🌙</button>
-            </div>
-        </div>
-        
-        <div class="modern-messaging-header">
-            <div class="chat-header-info">
-                <div class="avatar">
-                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=random2" alt="Stranger Avatar" id="stranger-avatar">
+            <div id="chat-messages" class="chat-messages">
+                <div class="message-date-divider">
+                    <span>Today</span>
                 </div>
-                <div>
-                    <h3 id="stranger-username">Connecting...</h3>
-                    <p id="connection-status">Finding a match...</p>
+                <div class="message incoming">
+                    <div class="message-bubble">
+                        <div class="message-content">Welcome to PvP Chat! Wait while we connect you with a stranger...</div>
+                        <div class="message-meta">
+                            <span class="message-time">System</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="chat-header-actions">
-                <button id="mute-btn" class="tooltip">🔇
-                    <span class="tooltip-text">Mute notifications</span>
+            
+            <div class="chat-input-container glass-container">
+                <button id="emoji-btn" class="icon-button">
+                    <i class="fas fa-smile"></i>
                 </button>
-                <button id="report-btn" class="tooltip">⚠️
-                    <span class="tooltip-text">Report user</span>
+                <button id="attachment-btn" class="icon-button">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <div class="chat-input-wrapper">
+                    <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                </div>
+                <button id="send-btn" class="icon-button send-button">
+                    <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>
         
-        <div id="chat-messages" class="modern-messaging-messages">
-            <div class="message incoming">
-                <div class="message-bubble">
-                    Welcome to PvP Chat! Wait while we connect you with a stranger...
-                    <div class="message-time">System</div>
+        <!-- Right Sidebar / Profile Info -->
+        <div class="profile-sidebar" id="profile-sidebar">
+            <div class="sidebar-header">
+                <h3>Profile Info</h3>
+                <button id="close-profile-sidebar" class="icon-button">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="profile-content">
+                <div class="profile-header">
+                    <div class="large-avatar">
+                        <img id="profile-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=random2" alt="Profile avatar">
+                    </div>
+                    <h2 id="profile-username">Unknown User</h2>
+                </div>
+                
+                <div class="profile-section">
+                    <h4>About</h4>
+                    <div class="profile-detail">
+                        <i class="fas fa-birthday-cake"></i>
+                        <span id="profile-age">-- years old</span>
+                    </div>
+                    <div class="profile-detail">
+                        <i class="fas fa-venus-mars"></i>
+                        <span id="profile-gender">--</span>
+                    </div>
+                </div>
+                
+                <div class="profile-section">
+                    <h4>Interests</h4>
+                    <div id="profile-interests" class="interests-container">
+                        <!-- Interest tags will be added dynamically -->
+                    </div>
+                </div>
+                
+                <div class="profile-actions">
+                    <button id="block-user-btn" class="danger-button">
+                        <i class="fas fa-ban"></i> Block User
+                    </button>
                 </div>
             </div>
         </div>
-        
-        <div class="modern-messaging-input">
-            <div class="floating-input" style="flex: 1; margin-bottom: 0; margin-right: 10px;">
-                <input type="text" id="message-input" placeholder=" " autocomplete="off">
-                <label for="message-input">Type a message...</label>
+    </div>
+
+    <!-- New Chat Modal -->
+    <div id="new-chat-modal" class="modal">
+        <div class="modal-content glass-container">
+            <div class="modal-header">
+                <h3>Start a New Chat</h3>
+                <span class="close-modal" id="close-new-chat">&times;</span>
             </div>
-            <button id="send-btn" class="btn-modern">Send</button>
+            <div class="modal-body">
+                <p>How would you like to find a chat partner?</p>
+                
+                <div class="chat-option-cards">
+                    <div class="chat-option-card" id="random-chat-option">
+                        <i class="fas fa-random option-icon"></i>
+                        <h4>Random Match</h4>
+                        <p>Find someone completely random to chat with</p>
+                    </div>
+                    
+                    <div class="chat-option-card" id="interests-chat-option">
+                        <i class="fas fa-tags option-icon"></i>
+                        <h4>Interests Match</h4>
+                        <p>Find someone who shares your interests</p>
+                    </div>
+                    
+                    <div class="chat-option-card" id="gender-chat-option">
+                        <i class="fas fa-venus-mars option-icon"></i>
+                        <h4>Gender Filter</h4>
+                        <p>Match with specific gender preferences</p>
+                    </div>
+                </div>
+                
+                <div id="gender-filter-options" class="filter-options hidden">
+                    <h4>Select Gender Preference</h4>
+                    <div class="gender-options">
+                        <label class="gender-option">
+                            <input type="radio" name="gender-preference" value="male">
+                            <span class="gender-label"><i class="fas fa-mars"></i> Male</span>
+                        </label>
+                        <label class="gender-option">
+                            <input type="radio" name="gender-preference" value="female">
+                            <span class="gender-label"><i class="fas fa-venus"></i> Female</span>
+                        </label>
+                        <label class="gender-option">
+                            <input type="radio" name="gender-preference" value="any" checked>
+                            <span class="gender-label"><i class="fas fa-users"></i> Any</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button id="start-new-chat-btn" class="btn-modern">Start Chatting</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Skip Confirmation Modal -->
     <div id="skip-modal" class="modal">
-        <div class="modal-content">
-            <div class="close-modal" id="cancel-skip">×</div>
-            <h3>Skip this chat?</h3>
-            <p>Are you sure you want to end this conversation and find a new chat partner?</p>
-            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-                <button id="cancel-skip-btn" class="btn btn-secondary">Cancel</button>
-                <button id="confirm-skip-btn" class="btn btn-primary">Yes, Skip</button>
+        <div class="modal-content glass-container">
+            <div class="modal-header">
+                <h3>Skip this chat?</h3>
+                <span class="close-modal" id="cancel-skip">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to end this conversation and find a new chat partner?</p>
+                <div class="modal-actions">
+                    <button id="cancel-skip-btn" class="btn-secondary">Cancel</button>
+                    <button id="confirm-skip-btn" class="btn-modern">Yes, Skip</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Report Modal -->
     <div id="report-modal" class="modal">
-        <div class="modal-content">
-            <div class="close-modal" id="cancel-report">×</div>
-            <h3>Report User</h3>
-            <p>Please select the reason for reporting this user:</p>
-            <form id="report-form">
-                <div style="margin-bottom: 15px;">
-                    <label>
-                        <input type="radio" name="report-reason" value="harassment"> Harassment
-                    </label>
+        <div class="modal-content glass-container">
+            <div class="modal-header">
+                <h3>Report User</h3>
+                <span class="close-modal" id="cancel-report">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Please select the reason for reporting this user:</p>
+                <form id="report-form">
+                    <div class="report-options">
+                        <label class="report-option">
+                            <input type="radio" name="report-reason" value="harassment">
+                            <span class="report-label">Harassment</span>
+                        </label>
+                        <label class="report-option">
+                            <input type="radio" name="report-reason" value="inappropriate">
+                            <span class="report-label">Inappropriate content</span>
+                        </label>
+                        <label class="report-option">
+                            <input type="radio" name="report-reason" value="spam">
+                            <span class="report-label">Spam</span>
+                        </label>
+                        <label class="report-option">
+                            <input type="radio" name="report-reason" value="other">
+                            <span class="report-label">Other</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="report-details" placeholder="Additional details..." rows="4"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-report-btn" class="btn-secondary">Cancel</button>
+                        <button type="submit" id="submit-report-btn" class="btn-modern">Submit Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting for Match Modal -->
+    <div id="waiting-modal" class="modal">
+        <div class="modal-content glass-container">
+            <div class="modal-header">
+                <h3>Finding a Match</h3>
+                <span class="close-modal" id="cancel-waiting">&times;</span>
+            </div>
+            <div class="modal-body text-center">
+                <div class="loader-container">
+                    <div class="chat-loader"></div>
                 </div>
-                <div style="margin-bottom: 15px;">
-                    <label>
-                        <input type="radio" name="report-reason" value="inappropriate"> Inappropriate content
-                    </label>
+                <p>We're looking for someone who matches your preferences...</p>
+                <p id="waiting-time">Time elapsed: 0s</p>
+                <div class="modal-actions">
+                    <button id="cancel-waiting-btn" class="btn-modern">Cancel</button>
                 </div>
-                <div style="margin-bottom: 15px;">
-                    <label>
-                        <input type="radio" name="report-reason" value="spam"> Spam
-                    </label>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label>
-                        <input type="radio" name="report-reason" value="other"> Other
-                    </label>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <textarea id="report-details" placeholder="Additional details..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></textarea>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-                    <button type="button" id="cancel-report-btn" class="btn btn-secondary">Cancel</button>
-                    <button type="submit" id="submit-report-btn" class="btn btn-primary">Submit Report</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
